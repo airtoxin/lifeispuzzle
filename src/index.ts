@@ -3,6 +3,7 @@ import { Puzzle } from './interfaces';
 import { SudokuGrid } from './sudoku-solver';
 import { NQueensPuzzle, NQueensSolution, NQueensSolver } from './nqueens-solver';
 import { GraphColoringPuzzle, GraphColoringSolution, GraphColoringSolver } from './graph-coloring-solver';
+import { YajirinPuzzle, YajirinSolution, YajirinSolver } from './yajirin-solver';
 import { Z3PuzzleFactory, createPuzzleSolver, PuzzleUtils } from './puzzle-factory';
 
 // デモンストレーション用の関数
@@ -121,6 +122,38 @@ async function solveGraphColoring(ctx: Context): Promise<void> {
   }
 }
 
+async function solveYajirin(ctx: Context): Promise<void> {
+  console.log('\n=== ヤジリンパズルの解法 ===');
+  
+  const yajirinSolver = createPuzzleSolver<YajirinPuzzle, YajirinSolution>('yajirin', ctx);
+  
+  // 簡単なヤジリンパズルを作成
+  const yajirinPuzzle: Puzzle<YajirinPuzzle> = {
+    type: 'yajirin',
+    data: YajirinSolver.createSimplePuzzle()
+  };
+
+  console.log('パズル設定:');
+  console.log(`グリッドサイズ: ${yajirinPuzzle.data.width}x${yajirinPuzzle.data.height}`);
+  console.log('ヒント:');
+  yajirinPuzzle.data.hints.forEach((hint, i) => {
+    const dirSymbol = {
+      'up': '↑', 'down': '↓', 'left': '←', 'right': '→'
+    }[hint.direction];
+    console.log(`  ${i + 1}. (${hint.row},${hint.col}) ${dirSymbol}方向に ${hint.count}個`);
+  });
+
+  const solution = await yajirinSolver.solve(yajirinPuzzle);
+
+  if (solution.solved) {
+    console.log('\nヤジリンパズルの解が見つかりました:');
+    console.log(YajirinSolver.displaySolution(solution.data, yajirinPuzzle.data.hints));
+  } else {
+    console.log('解が見つかりませんでした。');
+    console.log('（注意: ヤジリンソルバーは複雑な制約のため、簡単なケースのみ対応）');
+  }
+}
+
 async function demonstrateFactory(): Promise<void> {
   console.log('\n=== パズルファクトリーのデモンストレーション ===');
 
@@ -161,6 +194,7 @@ async function main(): Promise<void> {
     await solveSudoku(ctx);
     await solveNQueens(ctx);
     await solveGraphColoring(ctx);
+    await solveYajirin(ctx);
     await demonstrateFactory();
 
   } catch (error) {
@@ -177,4 +211,5 @@ export * from './interfaces';
 export * from './sudoku-solver';
 export * from './nqueens-solver';
 export * from './graph-coloring-solver';
+export * from './yajirin-solver';
 export * from './puzzle-factory';

@@ -3,6 +3,7 @@ import { PuzzleFactory, PuzzleSolver } from './interfaces';
 import { SudokuSolver } from './sudoku-solver';
 import { NQueensSolver } from './nqueens-solver';
 import { GraphColoringSolver } from './graph-coloring-solver';
+import { YajirinSolver } from './yajirin-solver';
 
 export class Z3PuzzleFactory implements PuzzleFactory {
   private static instance: Z3PuzzleFactory;
@@ -26,6 +27,7 @@ export class Z3PuzzleFactory implements PuzzleFactory {
     this.solverRegistry.set('n-queens', NQueensSolver);
     this.solverRegistry.set('graph-coloring', GraphColoringSolver);
     this.solverRegistry.set('graph_coloring', GraphColoringSolver);
+    this.solverRegistry.set('yajirin', YajirinSolver);
   }
 
   public createSolver<P, S>(puzzleType: string, ctx: Context): PuzzleSolver<P, S> {
@@ -84,6 +86,11 @@ export class PuzzleUtils {
       if (typeof data.vertices === 'number' && Array.isArray(data.edges)) {
         return 'graph-coloring';
       }
+      
+      // ヤジリンの検出
+      if (typeof data.width === 'number' && typeof data.height === 'number' && Array.isArray(data.hints)) {
+        return 'yajirin';
+      }
     }
     
     throw new Error('Could not infer puzzle type from data');
@@ -102,6 +109,8 @@ export class PuzzleUtils {
       case 'graph-coloring':
       case 'graph_coloring':
         return this.validateGraphColoringData(data);
+      case 'yajirin':
+        return this.validateYajirinData(data);
       default:
         return false;
     }
@@ -156,6 +165,42 @@ export class PuzzleUtils {
       const [u, v] = edge;
       if (typeof u !== 'number' || typeof v !== 'number' || 
           u < 0 || u >= data.vertices || v < 0 || v >= data.vertices) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  private static validateYajirinData(data: any): boolean {
+    if (!data || typeof data.width !== 'number' || typeof data.height !== 'number') {
+      return false;
+    }
+    
+    if (data.width <= 0 || data.height <= 0) {
+      return false;
+    }
+    
+    if (!Array.isArray(data.hints)) {
+      return false;
+    }
+    
+    const validDirections = ['up', 'down', 'left', 'right'];
+    
+    for (const hint of data.hints) {
+      if (!hint || typeof hint.row !== 'number' || typeof hint.col !== 'number') {
+        return false;
+      }
+      
+      if (hint.row < 0 || hint.row >= data.height || hint.col < 0 || hint.col >= data.width) {
+        return false;
+      }
+      
+      if (!validDirections.includes(hint.direction) || typeof hint.count !== 'number') {
+        return false;
+      }
+      
+      if (hint.count < 0) {
         return false;
       }
     }
