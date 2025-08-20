@@ -6,9 +6,9 @@
     "build": "tsc",
     "start": "npm run build && node dist/index.js",
     "dev": "tsx src/index.ts",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:type": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test": "run-p test:*"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@vitest/ui": "^3.2.4",
+    "npm-run-all2": "^8.0.4",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4"
