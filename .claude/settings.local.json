@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npx tsc:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run test:type:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

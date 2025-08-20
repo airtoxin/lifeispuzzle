@@ -1,4 +1,4 @@
-import { Arith, Bool, Context, init } from "z3-solver";
+import { Arith, Bool, Context, init, Model } from "z3-solver";
 
 // シリアライズ可能な盤面状態（基底型）
 export interface BoardState {
@@ -43,7 +43,7 @@ export function createBoardVariable<T extends string>(
 
 export function boardVariableToState<T extends string>(
   boardVar: BoardVariable<T>,
-  model: any,
+  model: Model<T>,
 ): BoardState {
   return {
     size: boardVar.size,

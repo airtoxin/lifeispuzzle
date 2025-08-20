@@ -1,4 +1,4 @@
-import { Context, init } from "z3-solver";
+import { Context, init, Bool } from "z3-solver";
 import {
   BoardState,
   createBoardVariable,
@@ -30,7 +30,7 @@ export interface SolverResult {
 
 // PuzzleSolver クラス
 export class PuzzleSolver {
-  private ctx?: Context<any>;
+  private ctx?: Context<string>;
   private isInitialized = false;
   private options: Required<SolverOptions>;
 
@@ -65,7 +65,7 @@ export class PuzzleSolver {
       const allRules = [...input.rules, givenValuesRule];
 
       // 制約を収集
-      const constraints: any[] = [];
+      const constraints: Bool<string>[] = [];
       for (const rule of allRules) {
         constraints.push(...rule.getConstraints(boardVar, this.ctx));
       }
@@ -125,7 +125,7 @@ export class PuzzleSolver {
       const givenValuesRule = createGivenValuesRule(input.initialBoard);
       const allRules = [...input.rules, givenValuesRule];
 
-      const constraints: any[] = [];
+      const constraints: Bool<string>[] = [];
       for (const rule of allRules) {
         constraints.push(...rule.getConstraints(boardVar, this.ctx));
       }
