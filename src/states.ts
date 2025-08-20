@@ -9,12 +9,12 @@ export interface BoardState {
 }
 
 // Z3変数を使った盤面状態（BoardStateから自動導出）
-export type BoardVariable = {
+export type BoardVariable<T extends string> = {
   [K in keyof BoardState]: K extends
     | "cells"
     | "horizontalEdges"
     | "verticalEdges"
-    ? Arith[][]
+    ? Arith<T>[][]
     : BoardState[K];
 };
 
@@ -23,10 +23,10 @@ export type DeepReadonly<T> = keyof T extends never
   : { readonly [K in keyof T]: DeepReadonly<T[K]> };
 
 // 型変換ユーティリティ関数
-export function createBoardVariable(
+export function createBoardVariable<T extends string>(
   boardState: BoardState,
-  ctx: Context<any>,
-): BoardVariable {
+  ctx: Context<T>,
+): BoardVariable<T> {
   return {
     size: boardState.size,
     cells: boardState.cells.map((row, rowIndex) =>
@@ -41,8 +41,8 @@ export function createBoardVariable(
   };
 }
 
-export function boardVariableToState(
-  boardVar: BoardVariable,
+export function boardVariableToState<T extends string>(
+  boardVar: BoardVariable<T>,
   model: any,
 ): BoardState {
   return {
