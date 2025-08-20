@@ -5,7 +5,9 @@
   "scripts": {
     "build": "tsc",
     "start": "npm run build && node dist/index.js",
-    "dev": "tsx src/index.ts",
+    "dev:server": "tsx --watch src/index.ts",
+    "dev:test": "vitest",
+    "dev": "run-p dev:*",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run",
     "test": "run-p test:*"
