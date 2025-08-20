@@ -53,22 +53,20 @@ async function runSample() {
   const { Context } = await init();
   const ctx = Context('main');
 
-  // 固定値での検証（unsatになる例）
-  console.log("=== 固定値での検証 ===");
   const fixedBoard: CanonicalBoardState = {
     size: 2,
     cells: [
-      [ctx.Int.const("0-0"), ctx.Int.const("0-1")],
-      [ctx.Int.const("1-0"), ctx.Int.const("1-1")]
+      [ctx.Int.const("c-0-0"), ctx.Int.const("c-0-1")],
+      [ctx.Int.const("c-1-0"), ctx.Int.const("c-1-1")]
     ],
     horizontalEdges: [
-      [ctx.Int.val(1), ctx.Int.val(1)],
-      [ctx.Int.val(1), ctx.Int.val(1)],
-      [ctx.Int.val(1), ctx.Int.val(1)]
+      [ctx.Int.const("he-0-0"), ctx.Int.const("he-0-1")],
+      [ctx.Int.const("he-1-0"), ctx.Int.const("he-1-1")],
+      [ctx.Int.const("he-2-0"), ctx.Int.const("he-2-1")]
     ],
     verticalEdges: [
-      [ctx.Int.val(1), ctx.Int.val(1)],
-      [ctx.Int.val(1), ctx.Int.val(1)]
+      [ctx.Int.const("ve-0-0"), ctx.Int.const("ve-0-1"), ctx.Int.const("ve-0-2")],
+      [ctx.Int.const("ve-1-0"), ctx.Int.const("ve-1-1"), ctx.Int.const("ve-1-2")],
     ]
   };
 
