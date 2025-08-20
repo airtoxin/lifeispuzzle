@@ -26,7 +26,13 @@ export class SudokuSolver extends Z3BaseSolver<SudokuGrid, SudokuGrid> {
   }
 
   private async findSolution(puzzleData: SudokuGrid): Promise<Solution<SudokuGrid>> {
-    // 9x9のグリッドに対応する変数を作成
+    /**
+     * 数独の制約充足問題としての定式化：
+     * 
+     * 【変数定義】
+     * - vars[i][j]: セル(i,j)に入る数字（1～9の整数）
+     * - 9×9 = 81個の整数変数を定義
+     */
     const vars: Arith[][] = [];
     for (let i = 0; i < 9; i++) {
       vars[i] = [];
@@ -37,10 +43,22 @@ export class SudokuSolver extends Z3BaseSolver<SudokuGrid, SudokuGrid> {
 
     const solver = new this.ctx.Solver();
 
-    // 基本的な数独制約を追加
+    /**
+     * 【制約システム】
+     * 数独の4つの基本制約を論理式として表現：
+     * 1. 各セルの値の範囲制約
+     * 2. 行の一意性制約  
+     * 3. 列の一意性制約
+     * 4. 3×3ブロックの一意性制約
+     */
     this.addSudokuConstraints(solver, vars);
 
-    // 既知の値を制約として追加
+    /**
+     * 【既知値制約】
+     * パズルの初期状態（ヒント数字）を制約として追加
+     * - 0でないセルは、その値に固定
+     * - これにより解空間が大幅に削減される
+     */
     for (let i = 0; i < 9; i++) {
       for (let j = 0; j < 9; j++) {
         if (puzzleData.grid[i][j] !== 0) {
@@ -206,7 +224,13 @@ export class SudokuSolver extends Z3BaseSolver<SudokuGrid, SudokuGrid> {
   }
 
   private addSudokuConstraints(solver: Solver, vars: Arith[][]): void {
-    // 制約1: 各セルには1-9の値が入る
+    /**
+     * 【制約1: 定義域制約】
+     * 各セルの値は1～9の範囲内でなければならない
+     * 論理式: ∀i,j ∈ [0,8] : 1 ≤ vars[i][j] ≤ 9
+     * 
+     * これにより無効な値（0, 10以上, 負数）が排除される
+     */
     for (let i = 0; i < 9; i++) {
       for (let j = 0; j < 9; j++) {
         solver.add(this.ctx.And(
@@ -216,12 +240,26 @@ export class SudokuSolver extends Z3BaseSolver<SudokuGrid, SudokuGrid> {
       }
     }
 
-    // 制約2: 各行には1-9が一度ずつ現れる
+    /**
+     * 【制約2: 行の一意性制約】 
+     * 各行には1～9の数字がちょうど一度ずつ現れなければならない
+     * 論理式: ∀i ∈ [0,8] : Distinct(vars[i][0], vars[i][1], ..., vars[i][8])
+     * 
+     * Z3のDistinct関数は「すべて異なる値」を保証する
+     * - 9個の変数がすべて異なる値を持つ
+     * - 定義域が1～9なので、必然的に{1,2,3,4,5,6,7,8,9}の順列となる
+     */
     for (let i = 0; i < 9; i++) {
       solver.add(this.ctx.Distinct(...vars[i]));
     }
 
-    // 制約3: 各列には1-9が一度ずつ現れる
+    /**
+     * 【制約3: 列の一意性制約】
+     * 各列には1～9の数字がちょうど一度ずつ現れなければならない  
+     * 論理式: ∀j ∈ [0,8] : Distinct(vars[0][j], vars[1][j], ..., vars[8][j])
+     * 
+     * 行制約と同様、各列も{1,2,3,4,5,6,7,8,9}の順列となる
+     */
     for (let j = 0; j < 9; j++) {
       const col: Arith[] = [];
       for (let i = 0; i < 9; i++) {
@@ -230,7 +268,21 @@ export class SudokuSolver extends Z3BaseSolver<SudokuGrid, SudokuGrid> {
       solver.add(this.ctx.Distinct(...col));
     }
 
-    // 制約4: 各3x3ブロックには1-9が一度ずつ現れる
+    /**
+     * 【制約4: 3×3ブロックの一意性制約】
+     * 各3×3ブロックには1～9の数字がちょうど一度ずつ現れなければならない
+     * 論理式: ∀blockRow,blockCol ∈ [0,2] : 
+     *         Distinct(vars[3*blockRow+i][3*blockCol+j]) for i,j ∈ [0,2]
+     * 
+     * 数独の最も特徴的な制約：
+     * - 9×9グリッドを3×3の9個のブロックに分割
+     * - 各ブロック内でも1～9がちょうど一度ずつ現れる
+     * - この制約により、行・列制約だけでは得られない複雑なパターンが生まれる
+     * 
+     * ブロック座標の計算:
+     * - ブロック(blockRow, blockCol)の実際の座標範囲は
+     *   [3*blockRow, 3*blockRow+2] × [3*blockCol, 3*blockCol+2]
+     */
     for (let blockRow = 0; blockRow < 3; blockRow++) {
       for (let blockCol = 0; blockCol < 3; blockCol++) {
         const block: Arith[] = [];
