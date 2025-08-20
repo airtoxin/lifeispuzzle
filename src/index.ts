@@ -1,12 +1,11 @@
 // エクスポート
-export * from './types.js';
+export * from './states.js';
 export * from './rules.js';
-export * from './utils.js';
-export { PuzzleSolver } from './solver.js';
+export { PuzzleSolver, SolverOptions, SolverInput, SolverResult } from './solver.js';
 
 // 便利な再エクスポート
 import { PuzzleSolver } from './solver.js';
-import { SerializableBoardState } from './types.js';
+import { BoardState } from './states.js';
 import { NumberFillRule, MagicSquareRule } from './rules.js';
 
 // サンプル実行
@@ -14,7 +13,7 @@ async function runSample() {
   console.log("=== PuzzleSolver を使用したサンプル実行 ===");
 
   // シリアライズ可能な基底状態を定義（いくつか初期値を設定）
-  const initialBoard: SerializableBoardState = {
+  const initialBoard: BoardState = {
     size: 3,
     cells: [
       [2, 0, 0],  // 左上に2を固定

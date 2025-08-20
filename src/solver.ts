@@ -1,7 +1,28 @@
 import { Context, init } from 'z3-solver';
-import { SolverOptions, SolverInput, SolverResult, SerializableBoardState, Rule } from './types.js';
-import { createCanonicalBoardState, boardStateToSerializable } from './utils.js';
-import { createGivenValuesRule } from './rules.js';
+import { BoardState, createBoardVariable, boardVariableToState } from './states.js';
+import { Rule, createGivenValuesRule } from './rules.js';
+
+// Solver関連のインターフェース定義
+export interface SolverOptions {
+  timeout?: number;        // タイムアウト（ms）
+  maxSolutions?: number;   // 求解数上限
+  contextName?: string;    // Z3コンテキスト名
+}
+
+export interface SolverInput {
+  initialBoard: BoardState;  // 初期盤面（0は未入力）
+  rules: Rule[];                         // 適用するルール配列
+  options?: SolverOptions;               // オプション設定
+}
+
+export interface SolverResult {
+  status: 'sat' | 'unsat' | 'timeout' | 'error';
+  solution?: BoardState;     // 解（satの場合）
+  solutions?: BoardState[];  // 複数解（複数求解の場合）
+  executionTime: number;                 // 実行時間（ms）
+  constraintCount: number;               // 制約数
+  error?: string;                        // エラーメッセージ
+}
 
 // PuzzleSolver クラス
 export class PuzzleSolver {
@@ -32,8 +53,8 @@ export class PuzzleSolver {
       await this.ensureInitialized();
       if (!this.ctx) throw new Error('Z3 context not initialized');
 
-      // SerializableBoardState → CanonicalBoardState変換
-      const canonicalBoard = createCanonicalBoardState(input.initialBoard, this.ctx);
+      // BoardState → BoardVariable変換
+      const boardVar = createBoardVariable(input.initialBoard, this.ctx);
       
       // Given値制約を自動追加
       const givenValuesRule = createGivenValuesRule(input.initialBoard);
@@ -42,7 +63,7 @@ export class PuzzleSolver {
       // 制約を収集
       const constraints: any[] = [];
       for (const rule of allRules) {
-        constraints.push(...rule.getConstraints(canonicalBoard, this.ctx));
+        constraints.push(...rule.getConstraints(boardVar, this.ctx));
       }
 
       // Z3 Solverで求解
@@ -54,7 +75,7 @@ export class PuzzleSolver {
 
       if (checkResult === 'sat') {
         const model = solver.model();
-        const solution = boardStateToSerializable(canonicalBoard, model);
+        const solution = boardVariableToState(boardVar, model);
         
         return {
           status: 'sat',
@@ -93,19 +114,19 @@ export class PuzzleSolver {
       await this.ensureInitialized();
       if (!this.ctx) throw new Error('Z3 context not initialized');
 
-      const canonicalBoard = createCanonicalBoardState(input.initialBoard, this.ctx);
+      const boardVar = createBoardVariable(input.initialBoard, this.ctx);
       const givenValuesRule = createGivenValuesRule(input.initialBoard);
       const allRules = [...input.rules, givenValuesRule];
       
       const constraints: any[] = [];
       for (const rule of allRules) {
-        constraints.push(...rule.getConstraints(canonicalBoard, this.ctx));
+        constraints.push(...rule.getConstraints(boardVar, this.ctx));
       }
 
       const solver = new this.ctx.Solver();
       constraints.forEach(constraint => solver.add(constraint));
 
-      const solutions: SerializableBoardState[] = [];
+      const solutions: BoardState[] = [];
       
       for (let i = 0; i < limit; i++) {
         const checkResult = await solver.check();
@@ -113,13 +134,13 @@ export class PuzzleSolver {
         if (checkResult !== 'sat') break;
         
         const model = solver.model();
-        const solution = boardStateToSerializable(canonicalBoard, model);
+        const solution = boardVariableToState(boardVar, model);
         solutions.push(solution);
         
         // 同じ解を除外する制約を追加
-        const exclusionConstraints = canonicalBoard.cells.flat().map((cell, index) => {
-          const row = Math.floor(index / canonicalBoard.size);
-          const col = index % canonicalBoard.size;
+        const exclusionConstraints = boardVar.cells.flat().map((cell, index) => {
+          const row = Math.floor(index / boardVar.size);
+          const col = index % boardVar.size;
           return cell.neq(solution.cells[row][col]);
         });
         solver.add(this.ctx.Or(...exclusionConstraints));
@@ -152,15 +173,15 @@ export class PuzzleSolver {
     }
   }
 
-  validateSolution(board: SerializableBoardState, rules: Rule[]): boolean {
+  validateSolution(boardState: BoardState, rules: Rule[]): boolean {
     try {
       // 簡易検証: 各ルールの基本条件をチェック
       // ここでは数値範囲とサイズの検証のみ実装
-      if (board.cells.length !== board.size) return false;
-      if (!board.cells.every(row => row.length === board.size)) return false;
+      if (boardState.cells.length !== boardState.size) return false;
+      if (!boardState.cells.every(row => row.length === boardState.size)) return false;
       
       // 0でない値は1以上でなければならない
-      for (const row of board.cells) {
+      for (const row of boardState.cells) {
         for (const cell of row) {
           if (cell !== 0 && cell < 1) return false;
         }
@@ -187,6 +208,7 @@ if (import.meta.vitest) {
     const { NumberFillRule, RowUniquenessRule, ColumnUniquenessRule } = await import('./rules.js');
     return { NumberFillRule, RowUniquenessRule, ColumnUniquenessRule };
   }
+  
 
   describe('PuzzleSolver', () => {
     let solver: PuzzleSolver;
@@ -247,22 +269,22 @@ if (import.meta.vitest) {
     });
 
     it('should validate solution correctly', () => {
-      const validBoard: SerializableBoardState = {
+      const validBoardState = {
         size: 2,
         cells: [[1, 2], [3, 4]],
         horizontalEdges: [[0, 0], [0, 0], [0, 0]],
         verticalEdges: [[0, 0, 0], [0, 0, 0]]
       };
 
-      const invalidBoard: SerializableBoardState = {
+      const invalidBoardState = {
         size: 2,
         cells: [[1, 2], [3]],  // 不正なサイズ
         horizontalEdges: [[0, 0], [0, 0], [0, 0]],
         verticalEdges: [[0, 0, 0], [0, 0, 0]]
       };
 
-      expect(solver.validateSolution(validBoard, [])).toBe(true);
-      expect(solver.validateSolution(invalidBoard, [])).toBe(false);
+      expect(solver.validateSolution(validBoardState, [])).toBe(true);
+      expect(solver.validateSolution(invalidBoardState, [])).toBe(false);
     });
 
     it('should handle solver options', () => {
