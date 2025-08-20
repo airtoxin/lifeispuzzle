@@ -1,16 +1,19 @@
-import {Arith, Bool, Context, init} from 'z3-solver';
+import { Arith, Bool, Context, init } from "z3-solver";
 
 // シリアライズ可能な盤面状態（基底型）
 export interface BoardState {
   size: number;
-  cells: number[][];             // セル値
-  horizontalEdges: number[][];   // 水平線 (size+1 × size)
-  verticalEdges: number[][];     // 垂直線 (size × size+1)
+  cells: number[][]; // セル値
+  horizontalEdges: number[][]; // 水平線 (size+1 × size)
+  verticalEdges: number[][]; // 垂直線 (size × size+1)
 }
 
 // Z3変数を使った盤面状態（BoardStateから自動導出）
 export type BoardVariable = {
-  [K in keyof BoardState]: K extends 'cells' | 'horizontalEdges' | 'verticalEdges'
+  [K in keyof BoardState]: K extends
+    | "cells"
+    | "horizontalEdges"
+    | "verticalEdges"
     ? Arith[][]
     : BoardState[K];
 };
@@ -20,93 +23,130 @@ export type DeepReadonly<T> = keyof T extends never
   : { readonly [K in keyof T]: DeepReadonly<T[K]> };
 
 // 型変換ユーティリティ関数
-export function createBoardVariable(boardState: BoardState, ctx: Context<any>): BoardVariable {
+export function createBoardVariable(
+  boardState: BoardState,
+  ctx: Context<any>,
+): BoardVariable {
   return {
     size: boardState.size,
     cells: boardState.cells.map((row, rowIndex) =>
-      row.map((_, colIndex) => ctx.Int.const(`c-${rowIndex}-${colIndex}`))
+      row.map((_, colIndex) => ctx.Int.const(`c-${rowIndex}-${colIndex}`)),
     ),
     horizontalEdges: boardState.horizontalEdges.map((row, rowIndex) =>
-      row.map((_, colIndex) => ctx.Int.const(`he-${rowIndex}-${colIndex}`))
+      row.map((_, colIndex) => ctx.Int.const(`he-${rowIndex}-${colIndex}`)),
     ),
     verticalEdges: boardState.verticalEdges.map((row, rowIndex) =>
-      row.map((_, colIndex) => ctx.Int.const(`ve-${rowIndex}-${colIndex}`))
-    )
+      row.map((_, colIndex) => ctx.Int.const(`ve-${rowIndex}-${colIndex}`)),
+    ),
   };
 }
 
-export function boardVariableToState(boardVar: BoardVariable, model: any): BoardState {
+export function boardVariableToState(
+  boardVar: BoardVariable,
+  model: any,
+): BoardState {
   return {
     size: boardVar.size,
-    cells: boardVar.cells.map(row =>
-      row.map(cellVar => {
+    cells: boardVar.cells.map((row) =>
+      row.map((cellVar) => {
         const value = model.eval(cellVar);
         return parseInt(value.toString());
-      })
+      }),
     ),
-    horizontalEdges: boardVar.horizontalEdges.map(row =>
-      row.map(edgeVar => {
+    horizontalEdges: boardVar.horizontalEdges.map((row) =>
+      row.map((edgeVar) => {
         const value = model.eval(edgeVar);
         return parseInt(value.toString());
-      })
+      }),
     ),
-    verticalEdges: boardVar.verticalEdges.map(row =>
-      row.map(edgeVar => {
+    verticalEdges: boardVar.verticalEdges.map((row) =>
+      row.map((edgeVar) => {
         const value = model.eval(edgeVar);
         return parseInt(value.toString());
-      })
-    )
+      }),
+    ),
   };
 }
-
-
 
 // In-source tests
 if (import.meta.vitest) {
   const { it, expect, describe } = import.meta.vitest;
 
-  describe('BoardState', () => {
-    it('should be serializable to JSON', () => {
+  describe("BoardState", () => {
+    it("should be serializable to JSON", () => {
       const boardState: BoardState = {
         size: 2,
-        cells: [[1, 2], [3, 4]],
-        horizontalEdges: [[0, 0], [0, 0], [0, 0]],
-        verticalEdges: [[0, 0, 0], [0, 0, 0]]
+        cells: [
+          [1, 2],
+          [3, 4],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
       };
 
       const json = JSON.stringify(boardState);
       const parsed = JSON.parse(json) as BoardState;
-      
+
       expect(parsed.size).toBe(2);
-      expect(parsed.cells).toEqual([[1, 2], [3, 4]]);
+      expect(parsed.cells).toEqual([
+        [1, 2],
+        [3, 4],
+      ]);
     });
-    
-    it('createBoardVariable should have proper structure', async () => {
-      const z3 = await import('z3-solver');
+
+    it("createBoardVariable should have proper structure", async () => {
+      const z3 = await import("z3-solver");
       const { Context } = await z3.init();
-      const ctx = Context('test');
+      const ctx = Context("test");
 
       const boardState: BoardState = {
         size: 2,
-        cells: [[0, 0], [0, 0]],
-        horizontalEdges: [[0, 0], [0, 0], [0, 0]],
-        verticalEdges: [[0, 0, 0], [0, 0, 0]]
+        cells: [
+          [0, 0],
+          [0, 0],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
       };
 
       const boardVar = createBoardVariable(boardState, ctx);
-      
+
       expect(boardVar.size).toBe(2);
       expect(boardVar.cells.length).toBe(2);
       expect(boardVar.cells[0].length).toBe(2);
     });
 
-    it('boardVariableToState should have proper structure', () => {
+    it("boardVariableToState should have proper structure", () => {
       // より簡単なテストに変更
       const boardState: BoardState = {
         size: 2,
-        cells: [[1, 2], [3, 4]],
-        horizontalEdges: [[0, 0], [0, 0], [0, 0]],
-        verticalEdges: [[0, 0, 0], [0, 0, 0]]
+        cells: [
+          [1, 2],
+          [3, 4],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
       };
 
       expect(boardState.size).toBe(2);

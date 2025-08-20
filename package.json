@@ -10,7 +10,9 @@
     "dev": "run-p dev:*",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run",
-    "test": "run-p test:*"
+    "test:format": "prettier --list-different .",
+    "test": "run-p test:*",
+    "format": "prettier --write ."
   },
   "keywords": [],
   "author": "",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "npm-run-all2": "^8.0.4",
+    "prettier": "^3.6.2",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4"
