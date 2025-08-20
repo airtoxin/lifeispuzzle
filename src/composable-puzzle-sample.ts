@@ -1,16 +1,63 @@
 import {Arith, Bool, Context, init} from 'z3-solver';
 
-// 盤面状態の正規表現
-interface CanonicalBoardState {
+// シリアライズ可能な盤面状態（基底型）
+interface SerializableBoardState {
   size: number;
-  cells: Arith[][];             // セル値
-  horizontalEdges: Arith[][];   // 水平線 (size+1 × size)
-  verticalEdges: Arith[][];     // 垂直線 (size × size+1)
+  cells: number[][];             // セル値
+  horizontalEdges: number[][];   // 水平線 (size+1 × size)
+  verticalEdges: number[][];     // 垂直線 (size × size+1)
 }
+
+// Z3変数を使った盤面状態（SerializableBoardStateから自動導出）
+type CanonicalBoardState = {
+  [K in keyof SerializableBoardState]: K extends 'cells' | 'horizontalEdges' | 'verticalEdges'
+    ? Arith[][]
+    : SerializableBoardState[K];
+};
 
 type DeepReadonly<T> = keyof T extends never
   ? T
   : { readonly [K in keyof T]: DeepReadonly<T[K]> };
+
+// 型変換ユーティリティ関数
+function createCanonicalBoardState(serializable: SerializableBoardState, ctx: Context): CanonicalBoardState {
+  return {
+    size: serializable.size,
+    cells: serializable.cells.map((row, rowIndex) =>
+      row.map((_, colIndex) => ctx.Int.const(`c-${rowIndex}-${colIndex}`))
+    ),
+    horizontalEdges: serializable.horizontalEdges.map((row, rowIndex) =>
+      row.map((_, colIndex) => ctx.Int.const(`he-${rowIndex}-${colIndex}`))
+    ),
+    verticalEdges: serializable.verticalEdges.map((row, rowIndex) =>
+      row.map((_, colIndex) => ctx.Int.const(`ve-${rowIndex}-${colIndex}`))
+    )
+  };
+}
+
+function boardStateToSerializable(board: CanonicalBoardState, model: any): SerializableBoardState {
+  return {
+    size: board.size,
+    cells: board.cells.map(row =>
+      row.map(cellVar => {
+        const value = model.eval(cellVar);
+        return parseInt(value.toString());
+      })
+    ),
+    horizontalEdges: board.horizontalEdges.map(row =>
+      row.map(edgeVar => {
+        const value = model.eval(edgeVar);
+        return parseInt(value.toString());
+      })
+    ),
+    verticalEdges: board.verticalEdges.map(row =>
+      row.map(edgeVar => {
+        const value = model.eval(edgeVar);
+        return parseInt(value.toString());
+      })
+    )
+  };
+}
 
 
 // ルールの基底インターフェース
@@ -128,33 +175,64 @@ const MagicSquareRule: Rule = {
   }
 }
 
+// 与えられた値の制約ルール
+function createGivenValuesRule(givenValues: SerializableBoardState): Rule {
+  return {
+    id: "given-values-rule",
+    name: "与えられた値制約",
+    description: "初期値として与えられたセルの値を固定する",
+    getConstraints(board, ctx) {
+      const constraints: Bool[] = [];
+      
+      for (let row = 0; row < givenValues.size; row++) {
+        for (let col = 0; col < givenValues.size; col++) {
+          const givenValue = givenValues.cells[row][col];
+          if (givenValue !== 0) {
+            constraints.push(board.cells[row][col].eq(givenValue));
+          }
+        }
+      }
+      
+      return constraints;
+    }
+  };
+}
+
 // サンプル実行
 async function runSample() {
   const { Context } = await init();
   const ctx = Context('main');
 
-  const fixedBoard: CanonicalBoardState = {
+  // シリアライズ可能な基底状態を定義（いくつか初期値を設定）
+  const serializableBoard: SerializableBoardState = {
     size: 3,
     cells: [
-      [ctx.Int.const("c-0-0"), ctx.Int.const("c-0-1"), ctx.Int.const("c-0-2")],
-      [ctx.Int.const("c-1-0"), ctx.Int.const("c-1-1"), ctx.Int.const("c-1-2")],
-      [ctx.Int.const("c-2-0"), ctx.Int.const("c-2-1"), ctx.Int.const("c-2-2")]
+      [2, 0, 0],  // 左上に2を固定
+      [0, 5, 0],  // 真ん中に5を固定  
+      [0, 0, 8]   // 右下に8を固定
     ],
     horizontalEdges: [
-      [ctx.Int.const("he-0-0"), ctx.Int.const("he-0-1"), ctx.Int.const("he-0-2")],
-      [ctx.Int.const("he-1-0"), ctx.Int.const("he-1-1"), ctx.Int.const("he-1-2")],
-      [ctx.Int.const("he-2-0"), ctx.Int.const("he-2-1"), ctx.Int.const("he-2-2")],
-      [ctx.Int.const("he-3-0"), ctx.Int.const("he-3-1"), ctx.Int.const("he-3-2")]
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
     ],
     verticalEdges: [
-      [ctx.Int.const("ve-0-0"), ctx.Int.const("ve-0-1"), ctx.Int.const("ve-0-2"), ctx.Int.const("ve-0-3")],
-      [ctx.Int.const("ve-1-0"), ctx.Int.const("ve-1-1"), ctx.Int.const("ve-1-2"), ctx.Int.const("ve-1-3")],
-      [ctx.Int.const("ve-2-0"), ctx.Int.const("ve-2-1"), ctx.Int.const("ve-2-2"), ctx.Int.const("ve-2-3")]
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
     ]
   };
 
+  // Z3変数を使った盤面状態に変換
+  const fixedBoard = createCanonicalBoardState(serializableBoard, ctx);
+  
+  // 与えられた値の制約ルールを作成
+  const givenValuesRule = createGivenValuesRule(serializableBoard);
+
   const fixedConstraints: readonly Bool[] = [
     ...NumberFillRule.getConstraints(fixedBoard, ctx),
+    ...givenValuesRule.getConstraints(fixedBoard, ctx),  // 初期値制約を追加
     // ...RowUniquenessRule.getConstraints(fixedBoard, ctx),
     // ...ColumnUniquenessRule.getConstraints(fixedBoard, ctx),
     // ...ColumnSortRule.getConstraints(fixedBoard, ctx),
@@ -177,27 +255,8 @@ async function runSample() {
     const model = solver.model();
     console.log("\n見つかった解:");
 
-    // JSON形式で解を表示
-    const solution = {
-      cells: fixedBoard.cells.map(row =>
-        row.map(cellVar => {
-          const value = model.eval(cellVar);
-          return parseInt(value.toString());
-        })
-      ),
-      horizontalEdges: fixedBoard.horizontalEdges.map(row =>
-        row.map(edgeVar => {
-          const value = model.eval(edgeVar);
-          return parseInt(value.toString());
-        })
-      ),
-      verticalEdges: fixedBoard.verticalEdges.map(row =>
-        row.map(edgeVar => {
-          const value = model.eval(edgeVar);
-          return parseInt(value.toString());
-        })
-      )
-    };
+    // 新しいユーティリティ関数を使用して解をシリアライズ可能な形式に変換
+    const solution = boardStateToSerializable(fixedBoard, model);
 
     console.log(JSON.stringify(solution));
   }
