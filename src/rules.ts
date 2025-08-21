@@ -789,3 +789,477 @@ if (import.meta.vitest) {
     });
   });
 }
+
+// スリザーリンク用ルール
+
+export const EdgeBinaryRule: Rule = {
+  id: "edge-binary-rule",
+  name: "エッジバイナリ制約",
+  description: "エッジが0または1の値のみを持つ",
+  getConstraints(boardVar, ctx) {
+    const constraints: Bool<string>[] = [];
+
+    // 水平エッジの制約
+    boardVar.horizontalEdges.forEach((row) => {
+      row.forEach((edge) => {
+        constraints.push(edge.ge(0).and(edge.le(1)));
+      });
+    });
+
+    // 垂直エッジの制約
+    boardVar.verticalEdges.forEach((row) => {
+      row.forEach((edge) => {
+        constraints.push(edge.ge(0).and(edge.le(1)));
+      });
+    });
+
+    return constraints;
+  },
+};
+
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("EdgeBinaryRule", () => {
+    it("should be satisfied with valid edge values (0 and 1)", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // 有効なエッジ値（0と1のみ）を持つ盤面
+      const validBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [0, 0],
+          [0, 0],
+        ],
+        horizontalEdges: [
+          [1, 0],
+          [0, 1],
+          [1, 0],
+        ],
+        verticalEdges: [
+          [0, 1, 0],
+          [1, 0, 1],
+        ],
+      };
+
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const edgeBinaryConstraints = EdgeBinaryRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenEdgeConstraints = createGivenEdgesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...edgeBinaryConstraints, ...givenEdgeConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with invalid edge values (outside 0-1 range)", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // 無効なエッジ値を含む盤面
+      const invalidBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [0, 0],
+          [0, 0],
+        ],
+        horizontalEdges: [
+          [2, 0], // 2は無効（0-1の範囲外）
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const edgeBinaryConstraints = EdgeBinaryRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenEdgeConstraints = createGivenEdgesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...edgeBinaryConstraints, ...givenEdgeConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
+
+// 与えられたエッジ値の制約ルール
+export function createGivenEdgesRule(initialState: BoardState): Rule {
+  return {
+    id: "given-edges-rule",
+    name: "与えられたエッジ制約",
+    description: "初期値として与えられたエッジの値を固定する",
+    getConstraints<T extends string>(
+      boardVar: BoardVariable<T>,
+      ctx: Context<T>,
+    ) {
+      const constraints: Bool<T>[] = [];
+
+      // 水平エッジの制約
+      for (let row = 0; row < initialState.horizontalEdges.length; row++) {
+        for (
+          let col = 0;
+          col < initialState.horizontalEdges[row].length;
+          col++
+        ) {
+          const givenValue = initialState.horizontalEdges[row][col];
+          if (givenValue !== 0) {
+            constraints.push(boardVar.horizontalEdges[row][col].eq(givenValue));
+          }
+        }
+      }
+
+      // 垂直エッジの制約
+      for (let row = 0; row < initialState.verticalEdges.length; row++) {
+        for (let col = 0; col < initialState.verticalEdges[row].length; col++) {
+          const givenValue = initialState.verticalEdges[row][col];
+          if (givenValue !== 0) {
+            constraints.push(boardVar.verticalEdges[row][col].eq(givenValue));
+          }
+        }
+      }
+
+      return constraints;
+    },
+  };
+}
+
+export const NumberConstraintRule: Rule = {
+  id: "number-constraint-rule",
+  name: "数字制約",
+  description: "各数字セルの周りのエッジ数が指定数と等しい",
+  getConstraints(boardVar, ctx) {
+    const constraints: Bool<string>[] = [];
+
+    for (let row = 0; row < boardVar.size; row++) {
+      for (let col = 0; col < boardVar.size; col++) {
+        // セルの値が0でない場合（数字が指定されている場合）
+        const cellValue = boardVar.cells[row][col];
+        const edges = [];
+
+        // 上のエッジ（水平エッジ[row][col]）
+        if (
+          row >= 0 &&
+          row < boardVar.horizontalEdges.length &&
+          col < boardVar.horizontalEdges[row].length
+        ) {
+          edges.push(boardVar.horizontalEdges[row][col]);
+        }
+
+        // 下のエッジ（水平エッジ[row+1][col]）
+        if (
+          row + 1 < boardVar.horizontalEdges.length &&
+          col < boardVar.horizontalEdges[row + 1].length
+        ) {
+          edges.push(boardVar.horizontalEdges[row + 1][col]);
+        }
+
+        // 左のエッジ（垂直エッジ[row][col]）
+        if (
+          row < boardVar.verticalEdges.length &&
+          col >= 0 &&
+          col < boardVar.verticalEdges[row].length
+        ) {
+          edges.push(boardVar.verticalEdges[row][col]);
+        }
+
+        // 右のエッジ（垂直エッジ[row][col+1]）
+        if (
+          row < boardVar.verticalEdges.length &&
+          col + 1 < boardVar.verticalEdges[row].length
+        ) {
+          edges.push(boardVar.verticalEdges[row][col + 1]);
+        }
+
+        // エッジの合計がセルの値と等しい制約を追加
+        if (edges.length > 0) {
+          const edgeSum = edges.reduce((sum, edge) => sum.add(edge));
+          // セルの値が正の数の場合のみ制約を追加
+          constraints.push(ctx.Implies(cellValue.gt(0), edgeSum.eq(cellValue)));
+        }
+      }
+    }
+
+    return constraints;
+  },
+};
+
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("NumberConstraintRule", () => {
+    it("should be satisfied with correct edge counts around numbers", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // 数字の周りのエッジ数が正しい盤面
+      const validBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [2, 0],
+          [0, 1],
+        ],
+        horizontalEdges: [
+          [1, 0], // セル[0][0]の上のエッジ
+          [1, 1], // セル[0][0]の下とセル[1][0]の上
+          [0, 0], // セル[1][0]の下
+        ],
+        verticalEdges: [
+          [1, 0, 0], // セル[0][0]の左、セル[0][0]とセル[0][1]の間、セル[0][1]の右
+          [0, 1, 0], // セル[1][0]の左、セル[1][0]とセル[1][1]の間、セル[1][1]の右
+        ],
+      };
+
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const numberConstraints = NumberConstraintRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+      const givenEdgeConstraints = createGivenEdgesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [
+        ...numberConstraints,
+        ...givenValueConstraints,
+        ...givenEdgeConstraints,
+      ].forEach((constraint) => solver.add(constraint));
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with incorrect edge counts around numbers", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // 数字の周りのエッジ数が間違っている盤面
+      // セル[0][0]に3があり、周りに2つのエッジしかない（3 ≠ 2）
+      const invalidBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [3, 0],
+          [0, 0],
+        ],
+        horizontalEdges: [
+          [1, 0], // セル[0][0]の上のエッジ
+          [1, 0], // セル[0][0]の下のエッジ
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0], // セル[0][0]の左と右のエッジは両方0
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const numberConstraints = NumberConstraintRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+      const givenEdgeConstraints = createGivenEdgesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+
+      // 数字制約のみを追加してテスト
+      numberConstraints.forEach((constraint) => solver.add(constraint));
+
+      // セル[0][0]を3に固定
+      solver.add(boardVar.cells[0][0].eq(3));
+
+      // エッジを固定
+      solver.add(boardVar.horizontalEdges[0][0].eq(1));
+      solver.add(boardVar.horizontalEdges[1][0].eq(1));
+      solver.add(boardVar.verticalEdges[0][0].eq(0));
+      solver.add(boardVar.verticalEdges[0][1].eq(0));
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
+
+export const VertexDegreeRule: Rule = {
+  id: "vertex-degree-rule",
+  name: "頂点次数制約",
+  description: "各頂点の次数が0または2である",
+  getConstraints(boardVar, ctx) {
+    const constraints: Bool<string>[] = [];
+
+    // 格子の頂点は (size+1) x (size+1) 個存在
+    for (let row = 0; row <= boardVar.size; row++) {
+      for (let col = 0; col <= boardVar.size; col++) {
+        const adjacentEdges = [];
+
+        // 上のエッジ（水平エッジ[row-1][col]）
+        if (
+          row > 0 &&
+          row - 1 < boardVar.horizontalEdges.length &&
+          col < boardVar.horizontalEdges[row - 1].length
+        ) {
+          adjacentEdges.push(boardVar.horizontalEdges[row - 1][col]);
+        }
+
+        // 下のエッジ（水平エッジ[row][col]）
+        if (
+          row < boardVar.horizontalEdges.length &&
+          col < boardVar.horizontalEdges[row].length
+        ) {
+          adjacentEdges.push(boardVar.horizontalEdges[row][col]);
+        }
+
+        // 左のエッジ（垂直エッジ[row][col-1]）
+        if (
+          row < boardVar.verticalEdges.length &&
+          col > 0 &&
+          col - 1 < boardVar.verticalEdges[row].length
+        ) {
+          adjacentEdges.push(boardVar.verticalEdges[row][col - 1]);
+        }
+
+        // 右のエッジ（垂直エッジ[row][col]）
+        if (
+          row < boardVar.verticalEdges.length &&
+          col < boardVar.verticalEdges[row].length
+        ) {
+          adjacentEdges.push(boardVar.verticalEdges[row][col]);
+        }
+
+        // 隣接エッジの合計（頂点の次数）が0または2
+        if (adjacentEdges.length > 0) {
+          const degree = adjacentEdges.reduce((sum, edge) => sum.add(edge));
+          constraints.push(degree.eq(0).or(degree.eq(2)));
+        }
+      }
+    }
+
+    return constraints;
+  },
+};
+
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("VertexDegreeRule", () => {
+    it("should be satisfied with valid vertex degrees (0 or 2)", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      const boardVar = createBoardVariable(
+        {
+          size: 2,
+          cells: [
+            [0, 0],
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+        ctx,
+      );
+
+      const vertexDegreeConstraints = VertexDegreeRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+
+      const solver = new ctx.Solver();
+      vertexDegreeConstraints.forEach((constraint) => solver.add(constraint));
+
+      // 全てのエッジを0に設定（すべての頂点の次数が0）
+      boardVar.horizontalEdges.flat().forEach((edge) => solver.add(edge.eq(0)));
+      boardVar.verticalEdges.flat().forEach((edge) => solver.add(edge.eq(0)));
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with invalid vertex degrees (1 or 3)", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      const boardVar = createBoardVariable(
+        {
+          size: 2,
+          cells: [
+            [0, 0],
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+        ctx,
+      );
+
+      const vertexDegreeConstraints = VertexDegreeRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+
+      const solver = new ctx.Solver();
+      vertexDegreeConstraints.forEach((constraint) => solver.add(constraint));
+
+      // 頂点[0][0]の次数を1にする（無効）
+      solver.add(boardVar.horizontalEdges[0][0].eq(1));
+      solver.add(boardVar.verticalEdges[0][0].eq(0));
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
