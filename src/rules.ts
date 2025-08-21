@@ -796,8 +796,11 @@ export const EdgeBinaryRule: Rule = {
   id: "edge-binary-rule",
   name: "エッジバイナリ制約",
   description: "エッジが0または1の値のみを持つ",
-  getConstraints(boardVar, ctx) {
-    const constraints: Bool<string>[] = [];
+  getConstraints<T extends string>(
+    boardVar: BoardVariable<T>,
+    ctx: Context<T>,
+  ) {
+    const constraints: Bool<T>[] = [];
 
     // 水平エッジの制約
     boardVar.horizontalEdges.forEach((row) => {
@@ -952,8 +955,11 @@ export const NumberConstraintRule: Rule = {
   id: "number-constraint-rule",
   name: "数字制約",
   description: "各数字セルの周りのエッジ数が指定数と等しい",
-  getConstraints(boardVar, ctx) {
-    const constraints: Bool<string>[] = [];
+  getConstraints<T extends string>(
+    boardVar: BoardVariable<T>,
+    ctx: Context<T>,
+  ) {
+    const constraints: Bool<T>[] = [];
 
     for (let row = 0; row < boardVar.size; row++) {
       for (let col = 0; col < boardVar.size; col++) {
@@ -1120,8 +1126,11 @@ export const VertexDegreeRule: Rule = {
   id: "vertex-degree-rule",
   name: "頂点次数制約",
   description: "各頂点の次数が0または2である",
-  getConstraints(boardVar, ctx) {
-    const constraints: Bool<string>[] = [];
+  getConstraints<T extends string>(
+    boardVar: BoardVariable<T>,
+    ctx: Context<T>,
+  ) {
+    const constraints: Bool<T>[] = [];
 
     // 格子の頂点は (size+1) x (size+1) 個存在
     for (let row = 0; row <= boardVar.size; row++) {
