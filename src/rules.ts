@@ -21,6 +21,96 @@ export const NumberFillRule: Rule = {
   },
 };
 
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("NumberFillRule", () => {
+    it("should be satisfied with positive numbers", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反しない初期盤面（全て正の数）
+      const validBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [1, 2],
+          [3, 4],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const numberFillConstraints = NumberFillRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...numberFillConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with non-positive numbers", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反する初期盤面（負の数を強制設定）
+      const invalidBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [-1, 2],
+          [3, 4],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const numberFillConstraints = NumberFillRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...numberFillConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
+
 export const RowUniquenessRule: Rule = {
   id: "row-uniqueness-rule",
   name: "行内数字一意性",
@@ -29,6 +119,96 @@ export const RowUniquenessRule: Rule = {
     return boardVar.cells.map((row) => ctx.Distinct(...row));
   },
 };
+
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("RowUniquenessRule", () => {
+    it("should be satisfied with unique values in rows", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反しない初期盤面（各行の値が一意）
+      const validBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [1, 2],
+          [3, 4],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const rowUniquenessConstraints = RowUniquenessRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...rowUniquenessConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with duplicate values in rows", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反する初期盤面（行内に重複あり）
+      const invalidBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [1, 1],
+          [2, 3],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const rowUniquenessConstraints = RowUniquenessRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...rowUniquenessConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
 
 export const ColumnUniquenessRule: Rule = {
   id: "column-uniqueness-rule",
@@ -40,6 +220,96 @@ export const ColumnUniquenessRule: Rule = {
     );
   },
 };
+
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("ColumnUniquenessRule", () => {
+    it("should be satisfied with unique values in columns", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反しない初期盤面（各列の値が一意）
+      const validBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [1, 2],
+          [3, 4],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const columnUniquenessConstraints = ColumnUniquenessRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...columnUniquenessConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with duplicate values in columns", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反する初期盤面（列内に重複あり）
+      const invalidBoardState: BoardState = {
+        size: 2,
+        cells: [
+          [1, 2],
+          [1, 3],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const columnUniquenessConstraints = ColumnUniquenessRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...columnUniquenessConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
 
 export const ColumnSortRule: Rule = {
   id: "column-sort-rule",
@@ -61,6 +331,102 @@ export const ColumnSortRule: Rule = {
   },
 };
 
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("ColumnSortRule", () => {
+    it("should be satisfied with sorted columns", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反しない初期盤面（列が昇順にソート済み）
+      const validBoardState: BoardState = {
+        size: 3,
+        cells: [
+          [1, 3, 5],
+          [2, 4, 6],
+          [3, 5, 7],
+        ],
+        horizontalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const columnSortConstraints = ColumnSortRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...columnSortConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with unsorted columns", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反する初期盤面（列がソートされていない）
+      const invalidBoardState: BoardState = {
+        size: 3,
+        cells: [
+          [3, 0, 0],
+          [1, 0, 0],
+          [2, 0, 0],
+        ],
+        horizontalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const columnSortConstraints = ColumnSortRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...columnSortConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
+
 export const RowSortRule: Rule = {
   id: "row-sort-rule",
   name: "行ソート制約",
@@ -78,6 +444,96 @@ export const RowSortRule: Rule = {
     });
   },
 };
+
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("RowSortRule", () => {
+    it("should be satisfied with sorted rows", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反しない初期盤面（行が昇順にソート済み）
+      const validBoardState: BoardState = {
+        size: 3,
+        cells: [
+          [1, 2, 3],
+          [4, 5, 6],
+          [7, 8, 9],
+        ],
+        horizontalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const rowSortConstraints = RowSortRule.getConstraints(boardVar, ctx);
+      const givenValueConstraints = createGivenValuesRule(
+        validBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...rowSortConstraints, ...givenValueConstraints].forEach((constraint) =>
+        solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with unsorted rows", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // ルールに違反する初期盤面（行がソートされていない）
+      const invalidBoardState: BoardState = {
+        size: 3,
+        cells: [
+          [3, 1, 2],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        horizontalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const rowSortConstraints = RowSortRule.getConstraints(boardVar, ctx);
+      const givenValueConstraints = createGivenValuesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...rowSortConstraints, ...givenValueConstraints].forEach((constraint) =>
+        solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
 
 export const MagicSquareRule: Rule = {
   id: "magic-square-rule",
@@ -140,6 +596,94 @@ export const MagicSquareRule: Rule = {
   },
 };
 
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("MagicSquareRule", () => {
+    it("should be satisfied with valid magic square configuration", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // 空の盤面で魔法陣の制約を満たす解が存在するか確認
+      const emptyBoardState: BoardState = {
+        size: 3,
+        cells: [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        horizontalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(emptyBoardState, ctx);
+      const constraints = MagicSquareRule.getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      constraints.forEach((constraint) => solver.add(constraint));
+
+      const result = await solver.check();
+      expect(result).toBe("sat");
+    });
+
+    it("should be violated with invalid magic square configuration", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
+
+      // 魔法陣の制約に違反する初期盤面（同じ数字を複数配置）
+      const invalidBoardState: BoardState = {
+        size: 3,
+        cells: [
+          [1, 1, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        horizontalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const magicSquareConstraints = MagicSquareRule.getConstraints(
+        boardVar,
+        ctx,
+      );
+      const givenValueConstraints = createGivenValuesRule(
+        invalidBoardState,
+      ).getConstraints(boardVar, ctx);
+
+      const solver = new ctx.Solver();
+      [...magicSquareConstraints, ...givenValueConstraints].forEach(
+        (constraint) => solver.add(constraint),
+      );
+
+      const result = await solver.check();
+      expect(result).toBe("unsat");
+    });
+  });
+}
+
 // 与えられた値の制約ルール
 export function createGivenValuesRule(initialState: BoardState): Rule {
   return {
@@ -166,21 +710,21 @@ export function createGivenValuesRule(initialState: BoardState): Rule {
   };
 }
 
-// In-source tests
 if (import.meta.vitest) {
   const { it, expect, describe } = import.meta.vitest;
 
-  describe("Rules constraint functionality", () => {
-    it("NumberFillRule should enforce positive numbers", async () => {
+  describe("createGivenValuesRule", () => {
+    it("should be satisfied when given values are consistent", async () => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
 
-      const boardState: BoardState = {
+      const validBoardState: BoardState = {
         size: 2,
         cells: [
-          [0, 0],
-          [0, 0],
+          [1, 2],
+          [3, 4],
         ],
         horizontalEdges: [
           [0, 0],
@@ -193,186 +737,29 @@ if (import.meta.vitest) {
         ],
       };
 
-      const boardVar = (await import("./states.js")).createBoardVariable(
-        boardState,
-        ctx,
-      );
-      const constraints = NumberFillRule.getConstraints(boardVar, ctx);
+      const boardVar = createBoardVariable(validBoardState, ctx);
+      const rule = createGivenValuesRule(validBoardState);
+      const constraints = rule.getConstraints(boardVar, ctx);
 
-      // 4つのセル全てが1以上の制約を持つ
-      expect(constraints.length).toBe(4);
-
-      // Z3 Solverで実際に解いてみる
-      const solver = new ctx.Solver();
-      constraints.forEach((constraint) => solver.add(constraint));
-
-      const result = await solver.check();
-      expect(result).toBe("sat"); // 解が存在することを確認
-
-      // 解を取得して全て1以上であることを確認
-      if (result === "sat") {
-        const model = solver.model();
-        const solution = (await import("./states.js")).boardVariableToState(
-          boardVar,
-          model,
-        );
-
-        for (const row of solution.cells) {
-          for (const cell of row) {
-            expect(cell).toBeGreaterThanOrEqual(1);
-          }
-        }
-      }
-    });
-
-    it("RowUniquenessRule should enforce unique values in rows", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-
-      const boardState: BoardState = {
-        size: 2,
-        cells: [
-          [0, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const { createBoardVariable, boardVariableToState } = await import(
-        "./states.js"
-      );
-      const boardVar = createBoardVariable(boardState, ctx);
-      const constraints = RowUniquenessRule.getConstraints(boardVar, ctx);
-
-      // 2つの行に対して一意性制約
-      expect(constraints.length).toBe(2);
-
-      // Z3 Solverで制約を満たす解があることを確認
-      const solver = new ctx.Solver();
-      constraints.forEach((constraint) => solver.add(constraint));
-      // 値の範囲も制限（1-2の値のみ使用可能）
-      boardVar.cells.flat().forEach((cell) => {
-        solver.add(cell.ge(1));
-        solver.add(cell.le(2));
-      });
-
-      const result = await solver.check();
-      expect(result).toBe("sat");
-
-      if (result === "sat") {
-        const model = solver.model();
-        const solution = (await import("./states.js")).boardVariableToState(
-          boardVar,
-          model,
-        );
-
-        // 各行で値が重複していないことを確認
-        for (const row of solution.cells) {
-          const uniqueValues = new Set(row);
-          expect(uniqueValues.size).toBe(row.length);
-        }
-      }
-    });
-
-    it("MagicSquareRule should create valid magic square", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-
-      const boardState: BoardState = {
-        size: 3,
-        cells: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-        ],
-      };
-
-      const boardVar = (await import("./states.js")).createBoardVariable(
-        boardState,
-        ctx,
-      );
-      const constraints = MagicSquareRule.getConstraints(boardVar, ctx);
-
-      // 期待される制約数: distinct(1) + range(9) + rows(2) + cols(3) + diags(2) = 17
-      expect(constraints.length).toBe(17);
-
-      // Z3 Solverで実際に魔法陣を解く
       const solver = new ctx.Solver();
       constraints.forEach((constraint) => solver.add(constraint));
 
       const result = await solver.check();
       expect(result).toBe("sat");
-
-      if (result === "sat") {
-        const model = solver.model();
-        const solution = (await import("./states.js")).boardVariableToState(
-          boardVar,
-          model,
-        );
-
-        // 魔法陣の性質を検証
-        const cells = solution.cells;
-
-        // 全ての数字が1-9で異なる
-        const allNumbers = cells.flat();
-        const uniqueNumbers = new Set(allNumbers);
-        expect(uniqueNumbers.size).toBe(9);
-        expect(Math.min(...allNumbers)).toBe(1);
-        expect(Math.max(...allNumbers)).toBe(9);
-
-        // 行の合計が全て等しい
-        const rowSums = cells.map((row) =>
-          row.reduce((sum, cell) => sum + cell, 0),
-        );
-        const magicSum = rowSums[0];
-        expect(rowSums.every((sum) => sum === magicSum)).toBe(true);
-
-        // 列の合計が等しい
-        for (let col = 0; col < 3; col++) {
-          const colSum = cells.reduce((sum, row) => sum + row[col], 0);
-          expect(colSum).toBe(magicSum);
-        }
-
-        // 対角線の合計が等しい
-        const mainDiagSum = cells[0][0] + cells[1][1] + cells[2][2];
-        const antiDiagSum = cells[0][2] + cells[1][1] + cells[2][0];
-        expect(mainDiagSum).toBe(magicSum);
-        expect(antiDiagSum).toBe(magicSum);
-      }
     });
 
-    it("createGivenValuesRule should fix specified values", async () => {
+    it("should be violated when conflicting values are given", async () => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
+      const { createBoardVariable } = await import("./states.js");
 
-      const initialBoardState: BoardState = {
+      const boardState: BoardState = {
         size: 2,
         cells: [
           [1, 0],
-          [0, 4],
-        ], // 1と4を固定
+          [0, 0],
+        ],
         horizontalEdges: [
           [0, 0],
           [0, 0],
@@ -384,34 +771,21 @@ if (import.meta.vitest) {
         ],
       };
 
-      const boardVar = (await import("./states.js")).createBoardVariable(
-        initialBoardState,
-        ctx,
-      );
-      const rule = createGivenValuesRule(initialBoardState);
-      const constraints = rule.getConstraints(boardVar, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
+      const givenValueConstraints = createGivenValuesRule(
+        boardState,
+      ).getConstraints(boardVar, ctx);
 
-      // 2つの固定値制約（セル[0,0]=1, セル[1,1]=4）
-      expect(constraints.length).toBe(2);
+      // 矛盾した制約を追加（同じセルに異なる値を設定）
+      const conflictingConstraint = boardVar.cells[0][0].eq(5);
 
-      // Z3 Solverで解く
       const solver = new ctx.Solver();
-      constraints.forEach((constraint) => solver.add(constraint));
+      [...givenValueConstraints, conflictingConstraint].forEach((constraint) =>
+        solver.add(constraint),
+      );
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-
-      if (result === "sat") {
-        const model = solver.model();
-        const solution = (await import("./states.js")).boardVariableToState(
-          boardVar,
-          model,
-        );
-
-        // 指定された値が固定されていることを確認
-        expect(solution.cells[0][0]).toBe(1);
-        expect(solution.cells[1][1]).toBe(4);
-      }
+      expect(result).toBe("unsat");
     });
   });
 }

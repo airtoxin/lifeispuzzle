@@ -210,9 +210,21 @@ export class PuzzleSolver {
   }
 }
 
-// In-source tests
 if (import.meta.vitest) {
   const { it, expect, describe, beforeEach, afterEach } = import.meta.vitest;
+
+  describe("PuzzleSolver constructor", () => {
+    it("should handle solver options", () => {
+      const customSolver = new PuzzleSolver({
+        timeout: 5000,
+        maxSolutions: 3,
+        contextName: "test-solver",
+      });
+
+      expect(customSolver).toBeDefined();
+      customSolver.dispose();
+    });
+  });
 
   async function loadRules() {
     const { NumberFillRule, RowUniquenessRule, ColumnUniquenessRule } =
@@ -220,7 +232,7 @@ if (import.meta.vitest) {
     return { NumberFillRule, RowUniquenessRule, ColumnUniquenessRule };
   }
 
-  describe("PuzzleSolver", () => {
+  describe("PuzzleSolver.solve", () => {
     let solver: PuzzleSolver;
 
     beforeEach(() => {
@@ -240,7 +252,7 @@ if (import.meta.vitest) {
           cells: [
             [1, 0],
             [0, 4],
-          ], // 1と4を固定
+          ],
           horizontalEdges: [
             [0, 0],
             [0, 0],
@@ -277,7 +289,7 @@ if (import.meta.vitest) {
           cells: [
             [1, 1],
             [1, 1],
-          ], // 不可能な組み合わせ
+          ],
           horizontalEdges: [
             [0, 0],
             [0, 0],
@@ -288,7 +300,7 @@ if (import.meta.vitest) {
             [0, 0, 0],
           ],
         },
-        rules: [RowUniquenessRule, ColumnUniquenessRule], // 一意性制約
+        rules: [RowUniquenessRule, ColumnUniquenessRule],
       };
 
       const result = await solver.solve(input);
@@ -297,8 +309,55 @@ if (import.meta.vitest) {
       expect(result.solution).toBeUndefined();
       expect(result.executionTime).toBeGreaterThan(0);
     });
+  });
 
+  describe("PuzzleSolver.solveMultiple", () => {
+    let solver: PuzzleSolver;
+
+    beforeEach(() => {
+      solver = new PuzzleSolver();
+    });
+
+    afterEach(() => {
+      solver.dispose();
+    });
+
+    it("should find multiple solutions when they exist", async () => {
+      const { NumberFillRule } = await loadRules();
+
+      const input: SolverInput = {
+        initialBoard: {
+          size: 2,
+          cells: [
+            [0, 0],
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+        rules: [NumberFillRule],
+      };
+
+      const result = await solver.solveMultiple(input, 2);
+
+      expect(result.status).toBe("sat");
+      expect(result.solutions).toBeDefined();
+      expect(result.solutions!.length).toBeGreaterThan(0);
+      expect(result.solutions!.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe("PuzzleSolver.validateSolution", () => {
     it("should validate solution correctly", () => {
+      const solver = new PuzzleSolver();
+
       const validBoardState = {
         size: 2,
         cells: [
@@ -318,7 +377,7 @@ if (import.meta.vitest) {
 
       const invalidBoardState = {
         size: 2,
-        cells: [[1, 2], [3]], // 不正なサイズ
+        cells: [[1, 2], [3]],
         horizontalEdges: [
           [0, 0],
           [0, 0],
@@ -332,48 +391,8 @@ if (import.meta.vitest) {
 
       expect(solver.validateSolution(validBoardState, [])).toBe(true);
       expect(solver.validateSolution(invalidBoardState, [])).toBe(false);
-    });
 
-    it("should handle solver options", () => {
-      const customSolver = new PuzzleSolver({
-        timeout: 5000,
-        maxSolutions: 3,
-        contextName: "test-solver",
-      });
-
-      expect(customSolver).toBeDefined();
-      customSolver.dispose();
-    });
-
-    it("should find multiple solutions when they exist", async () => {
-      const { NumberFillRule } = await loadRules();
-
-      const input: SolverInput = {
-        initialBoard: {
-          size: 2,
-          cells: [
-            [0, 0],
-            [0, 0],
-          ], // 全て未設定
-          horizontalEdges: [
-            [0, 0],
-            [0, 0],
-            [0, 0],
-          ],
-          verticalEdges: [
-            [0, 0, 0],
-            [0, 0, 0],
-          ],
-        },
-        rules: [NumberFillRule], // 1以上の制約のみ
-      };
-
-      const result = await solver.solveMultiple(input, 2);
-
-      expect(result.status).toBe("sat");
-      expect(result.solutions).toBeDefined();
-      expect(result.solutions!.length).toBeGreaterThan(0);
-      expect(result.solutions!.length).toBeLessThanOrEqual(2);
+      solver.dispose();
     });
   });
 }

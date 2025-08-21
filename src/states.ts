@@ -41,6 +41,41 @@ export function createBoardVariable<T extends string>(
   };
 }
 
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("createBoardVariable", () => {
+    it("should have proper structure", async () => {
+      const z3 = await import("z3-solver");
+      const { Context } = await z3.init();
+      const ctx = Context("test");
+
+      const boardState: BoardState = {
+        size: 2,
+        cells: [
+          [0, 0],
+          [0, 0],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      const boardVar = createBoardVariable(boardState, ctx);
+
+      expect(boardVar.size).toBe(2);
+      expect(boardVar.cells.length).toBe(2);
+      expect(boardVar.cells[0].length).toBe(2);
+    });
+  });
+}
+
 export function boardVariableToState<T extends string>(
   boardVar: BoardVariable<T>,
   model: Model<T>,
@@ -68,7 +103,35 @@ export function boardVariableToState<T extends string>(
   };
 }
 
-// In-source tests
+if (import.meta.vitest) {
+  const { it, expect, describe } = import.meta.vitest;
+
+  describe("boardVariableToState", () => {
+    it("should have proper structure", () => {
+      const boardState: BoardState = {
+        size: 2,
+        cells: [
+          [1, 2],
+          [3, 4],
+        ],
+        horizontalEdges: [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+        verticalEdges: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
+      };
+
+      expect(boardState.size).toBe(2);
+      expect(boardState.cells.length).toBe(2);
+      expect(boardState.cells[0].length).toBe(2);
+    });
+  });
+}
+
 if (import.meta.vitest) {
   const { it, expect, describe } = import.meta.vitest;
 
@@ -99,59 +162,6 @@ if (import.meta.vitest) {
         [1, 2],
         [3, 4],
       ]);
-    });
-
-    it("createBoardVariable should have proper structure", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-
-      const boardState: BoardState = {
-        size: 2,
-        cells: [
-          [0, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(boardState, ctx);
-
-      expect(boardVar.size).toBe(2);
-      expect(boardVar.cells.length).toBe(2);
-      expect(boardVar.cells[0].length).toBe(2);
-    });
-
-    it("boardVariableToState should have proper structure", () => {
-      // より簡単なテストに変更
-      const boardState: BoardState = {
-        size: 2,
-        cells: [
-          [1, 2],
-          [3, 4],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      expect(boardState.size).toBe(2);
-      expect(boardState.cells.length).toBe(2);
-      expect(boardState.cells[0].length).toBe(2);
     });
   });
 }
