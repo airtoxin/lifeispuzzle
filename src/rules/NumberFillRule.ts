@@ -10,41 +10,105 @@ export const NumberFillRule: Rule = {
     return boardVar.cells.flat().map((v) => v.ge(1));
   },
 };
+
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("NumberFillRule", () => {
-    it("should be satisfied with positive numbers", async () => {
+    test.for<[string, "sat" | "unsat", BoardState]>([
+      [
+        "盤面のすべてのマスが正の数字で埋まっている場合",
+        "sat",
+        {
+          size: 2,
+          cells: [
+            [1, 2],
+            [3, 4],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "負の数字が混じっている場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [-1, 2],
+            [3, 4],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "0が混じっている場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [-1, 2],
+            [3, 4],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "0よりも大きい少数が混じっている場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [1.5, 2],
+            [3, 4],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ]
+    ])("%s(%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
-      // ルールに違反しない初期盤面（全て正の数）
-      const validBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [1, 2],
-          [3, 4],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(validBoardState, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
       const numberFillConstraints = NumberFillRule.getConstraints(
         boardVar,
         ctx,
       );
       const givenValueConstraints = createGivenValuesRule(
-        validBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
 
       const solver = new ctx.Solver();
@@ -53,49 +117,7 @@ if (import.meta.vitest) {
       );
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with non-positive numbers", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // ルールに違反する初期盤面（負の数を強制設定）
-      const invalidBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [-1, 2],
-          [3, 4],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(invalidBoardState, ctx);
-      const numberFillConstraints = NumberFillRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const givenValueConstraints = createGivenValuesRule(
-        invalidBoardState,
-      ).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      [...numberFillConstraints, ...givenValueConstraints].forEach(
-        (constraint) => solver.add(constraint),
-      );
-
-      const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }
