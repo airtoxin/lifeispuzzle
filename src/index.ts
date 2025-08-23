@@ -1,6 +1,5 @@
 // エクスポート
 export * from "./states.js";
-export * from "./rules.js";
 export {
   PuzzleSolver,
   SolverOptions,
@@ -11,7 +10,8 @@ export {
 // 便利な再エクスポート
 import { PuzzleSolver } from "./solver.js";
 import { BoardState } from "./states.js";
-import { NumberFillRule, MagicSquareRule } from "./rules.js";
+import { MagicSquareRule } from "./rules/MagicSquareRule.js";
+import { NumberFillRule } from "./rules/NumberFillRule.js";
 
 // サンプル実行
 async function runSample() {

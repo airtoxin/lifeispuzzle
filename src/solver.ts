@@ -4,7 +4,8 @@ import {
   createBoardVariable,
   boardVariableToState,
 } from "./states.js";
-import { Rule, createGivenValuesRule } from "./rules.js";
+import { createGivenValuesRule } from "./rules/helpers.js";
+import { Rule } from "./rules/types.js";
 
 // Solver関連のインターフェース定義
 export interface SolverOptions {
@@ -227,8 +228,11 @@ if (import.meta.vitest) {
   });
 
   async function loadRules() {
-    const { NumberFillRule, RowUniquenessRule, ColumnUniquenessRule } =
-      await import("./rules.js");
+    const { NumberFillRule } = await import("./rules/NumberFillRule.js");
+    const { RowUniquenessRule } = await import("./rules/RowUniquenessRule.js");
+    const { ColumnUniquenessRule } = await import(
+      "./rules/ColumnUniquenessRule.js"
+    );
     return { NumberFillRule, RowUniquenessRule, ColumnUniquenessRule };
   }
 
