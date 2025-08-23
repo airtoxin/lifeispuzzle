@@ -95,7 +95,7 @@ if (import.meta.vitest) {
             [0, 0, 0],
           ],
         },
-      ]
+      ],
     ])("%s(%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();

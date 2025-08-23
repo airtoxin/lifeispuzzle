@@ -11,40 +11,83 @@ export const RowUniquenessRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("RowUniquenessRule", () => {
-    it("should be satisfied with unique values in rows", async () => {
+    test.for<[string, "sat" | "unsat", BoardState]>([
+      [
+        "各行の値が一意な場合",
+        "sat",
+        {
+          size: 2,
+          cells: [
+            [1, 2],
+            [3, 4],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "行内に重複値がある場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [1, 1],
+            [2, 3],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "複数行に重複がある場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [1, 1],
+            [2, 2],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+    ])("%s (%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
-      // ルールに違反しない初期盤面（各行の値が一意）
-      const validBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [1, 2],
-          [3, 4],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(validBoardState, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
       const rowUniquenessConstraints = RowUniquenessRule.getConstraints(
         boardVar,
         ctx,
       );
       const givenValueConstraints = createGivenValuesRule(
-        validBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
 
       const solver = new ctx.Solver();
@@ -53,49 +96,7 @@ if (import.meta.vitest) {
       );
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with duplicate values in rows", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // ルールに違反する初期盤面（行内に重複あり）
-      const invalidBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [1, 1],
-          [2, 3],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(invalidBoardState, ctx);
-      const rowUniquenessConstraints = RowUniquenessRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const givenValueConstraints = createGivenValuesRule(
-        invalidBoardState,
-      ).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      [...rowUniquenessConstraints, ...givenValueConstraints].forEach(
-        (constraint) => solver.add(constraint),
-      );
-
-      const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

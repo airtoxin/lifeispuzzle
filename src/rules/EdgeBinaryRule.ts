@@ -33,40 +33,83 @@ export const EdgeBinaryRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("EdgeBinaryRule", () => {
-    it("should be satisfied with valid edge values (0 and 1)", async () => {
+    test.for<[string, "sat" | "unsat", BoardState]>([
+      [
+        "エッジが0と1の値のみの場合",
+        "sat",
+        {
+          size: 2,
+          cells: [
+            [0, 0],
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [1, 0],
+            [0, 1],
+            [1, 0],
+          ],
+          verticalEdges: [
+            [0, 1, 0],
+            [1, 0, 1],
+          ],
+        },
+      ],
+      [
+        "エッジに2が含まれる場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [0, 0],
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [2, 0], // 2は無効（0-1の範囲外）
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "エッジに負の値が含まれる場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [0, 0],
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [-1, 0, 0], // -1は無効（0-1の範囲外）
+            [0, 0, 0],
+          ],
+        },
+      ],
+    ])("%s (%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
-      // 有効なエッジ値（0と1のみ）を持つ盤面
-      const validBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [0, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [1, 0],
-          [0, 1],
-          [1, 0],
-        ],
-        verticalEdges: [
-          [0, 1, 0],
-          [1, 0, 1],
-        ],
-      };
-
-      const boardVar = createBoardVariable(validBoardState, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
       const edgeBinaryConstraints = EdgeBinaryRule.getConstraints(
         boardVar,
         ctx,
       );
       const givenEdgeConstraints = createGivenEdgesRule(
-        validBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
 
       const solver = new ctx.Solver();
@@ -75,49 +118,7 @@ if (import.meta.vitest) {
       );
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with invalid edge values (outside 0-1 range)", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // 無効なエッジ値を含む盤面
-      const invalidBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [0, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [2, 0], // 2は無効（0-1の範囲外）
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(invalidBoardState, ctx);
-      const edgeBinaryConstraints = EdgeBinaryRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const givenEdgeConstraints = createGivenEdgesRule(
-        invalidBoardState,
-      ).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      [...edgeBinaryConstraints, ...givenEdgeConstraints].forEach(
-        (constraint) => solver.add(constraint),
-      );
-
-      const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

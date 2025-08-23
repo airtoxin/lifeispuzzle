@@ -66,43 +66,86 @@ export const NumberConstraintRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("NumberConstraintRule", () => {
-    it("should be satisfied with correct edge counts around numbers", async () => {
+    test.for<[string, "sat" | "unsat", BoardState]>([
+      [
+        "数字の周りのエッジ数が正しい場合",
+        "sat",
+        {
+          size: 2,
+          cells: [
+            [2, 0],
+            [0, 1],
+          ],
+          horizontalEdges: [
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [1, 0, 0],
+            [0, 1, 0],
+          ],
+        },
+      ],
+      [
+        "数字の周りのエッジ数が間違っている場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [3, 0], // 3が指定されているが周りのエッジは2個のみ
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [1, 0], // 上のエッジ
+            [1, 0], // 下のエッジ
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0], // 左右のエッジは0
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "0の数字は制約の対象外の場合",
+        "sat",
+        {
+          size: 2,
+          cells: [
+            [0, 0], // 0なので制約なし
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [1, 1], // エッジの値は任意
+            [1, 1],
+            [1, 1],
+          ],
+          verticalEdges: [
+            [1, 1, 1],
+            [1, 1, 1],
+          ],
+        },
+      ],
+    ])("%s (%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
-      // 数字の周りのエッジ数が正しい盤面
-      const validBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [2, 0],
-          [0, 1],
-        ],
-        horizontalEdges: [
-          [1, 0], // セル[0][0]の上のエッジ
-          [1, 1], // セル[0][0]の下とセル[1][0]の上
-          [0, 0], // セル[1][0]の下
-        ],
-        verticalEdges: [
-          [1, 0, 0], // セル[0][0]の左、セル[0][0]とセル[0][1]の間、セル[0][1]の右
-          [0, 1, 0], // セル[1][0]の左、セル[1][0]とセル[1][1]の間、セル[1][1]の右
-        ],
-      };
-
-      const boardVar = createBoardVariable(validBoardState, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
       const numberConstraints = NumberConstraintRule.getConstraints(
         boardVar,
         ctx,
       );
       const givenValueConstraints = createGivenValuesRule(
-        validBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
       const givenEdgeConstraints = createGivenEdgesRule(
-        validBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
 
       const solver = new ctx.Solver();
@@ -113,62 +156,7 @@ if (import.meta.vitest) {
       ].forEach((constraint) => solver.add(constraint));
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with incorrect edge counts around numbers", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // 数字の周りのエッジ数が間違っている盤面
-      // セル[0][0]に3があり、周りに2つのエッジしかない（3 ≠ 2）
-      const invalidBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [3, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [1, 0], // セル[0][0]の上のエッジ
-          [1, 0], // セル[0][0]の下のエッジ
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0], // セル[0][0]の左と右のエッジは両方0
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(invalidBoardState, ctx);
-      const numberConstraints = NumberConstraintRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const givenValueConstraints = createGivenValuesRule(
-        invalidBoardState,
-      ).getConstraints(boardVar, ctx);
-      const givenEdgeConstraints = createGivenEdgesRule(
-        invalidBoardState,
-      ).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-
-      // 数字制約のみを追加してテスト
-      numberConstraints.forEach((constraint) => solver.add(constraint));
-
-      // セル[0][0]を3に固定
-      solver.add(boardVar.cells[0][0].eq(3));
-
-      // エッジを固定
-      solver.add(boardVar.horizontalEdges[0][0].eq(1));
-      solver.add(boardVar.horizontalEdges[1][0].eq(1));
-      solver.add(boardVar.verticalEdges[0][0].eq(0));
-      solver.add(boardVar.verticalEdges[0][1].eq(0));
-
-      const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

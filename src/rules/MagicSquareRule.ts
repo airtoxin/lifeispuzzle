@@ -64,80 +64,92 @@ export const MagicSquareRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("MagicSquareRule", () => {
-    it("should be satisfied with valid magic square configuration", async () => {
+    test.for<[string, "sat" | "unsat", BoardState]>([
+      [
+        "空の盤面で魔法陣制約が満たせる場合",
+        "sat",
+        {
+          size: 3,
+          cells: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "重複した数字がある場合",
+        "unsat",
+        {
+          size: 3,
+          cells: [
+            [1, 1, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "範囲外の数字がある場合",
+        "unsat",
+        {
+          size: 3,
+          cells: [
+            [1, 2, 10], // 10は範囲外（1-9が有効）
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+    ])("%s (%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
-      // 空の盤面で魔法陣の制約を満たす解が存在するか確認
-      const emptyBoardState: BoardState = {
-        size: 3,
-        cells: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(emptyBoardState, ctx);
-      const constraints = MagicSquareRule.getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      constraints.forEach((constraint) => solver.add(constraint));
-
-      const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with invalid magic square configuration", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // 魔法陣の制約に違反する初期盤面（同じ数字を複数配置）
-      const invalidBoardState: BoardState = {
-        size: 3,
-        cells: [
-          [1, 1, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(invalidBoardState, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
       const magicSquareConstraints = MagicSquareRule.getConstraints(
         boardVar,
         ctx,
       );
       const givenValueConstraints = createGivenValuesRule(
-        invalidBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
 
       const solver = new ctx.Solver();
@@ -146,7 +158,7 @@ if (import.meta.vitest) {
       );
 
       const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

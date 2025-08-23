@@ -63,10 +63,85 @@ export const VertexDegreeRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("VertexDegreeRule", () => {
-    it("should be satisfied with valid vertex degrees (0 or 2)", async () => {
+    test.for<
+      [
+        string,
+        "sat" | "unsat",
+        { edges: { horizontal: number[][]; vertical: number[][] } },
+      ]
+    >([
+      [
+        "全頂点の次数が0の場合",
+        "sat",
+        {
+          edges: {
+            horizontal: [
+              [0, 0],
+              [0, 0],
+              [0, 0],
+            ],
+            vertical: [
+              [0, 0, 0],
+              [0, 0, 0],
+            ],
+          },
+        },
+      ],
+      [
+        "全頂点の次数が2の場合",
+        "sat",
+        {
+          edges: {
+            horizontal: [
+              [1, 1],
+              [1, 1],
+              [1, 1],
+            ],
+            vertical: [
+              [1, 0, 1],
+              [1, 0, 1],
+            ],
+          },
+        },
+      ],
+      [
+        "頂点の次数が1の場合",
+        "unsat",
+        {
+          edges: {
+            horizontal: [
+              [1, 0], // 左上の頂点の次数が1
+              [0, 0],
+              [0, 0],
+            ],
+            vertical: [
+              [0, 0, 0],
+              [0, 0, 0],
+            ],
+          },
+        },
+      ],
+      [
+        "頂点の次数が3の場合",
+        "unsat",
+        {
+          edges: {
+            horizontal: [
+              [1, 0],
+              [1, 0], // 中央の頂点の次数が3
+              [0, 0],
+            ],
+            vertical: [
+              [1, 0, 0],
+              [0, 0, 0],
+            ],
+          },
+        },
+      ],
+    ])("%s (%s)", async ([, expecting, { edges }]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
@@ -79,15 +154,8 @@ if (import.meta.vitest) {
             [0, 0],
             [0, 0],
           ],
-          horizontalEdges: [
-            [0, 0],
-            [0, 0],
-            [0, 0],
-          ],
-          verticalEdges: [
-            [0, 0, 0],
-            [0, 0, 0],
-          ],
+          horizontalEdges: edges.horizontal,
+          verticalEdges: edges.vertical,
         },
         ctx,
       );
@@ -100,54 +168,20 @@ if (import.meta.vitest) {
       const solver = new ctx.Solver();
       vertexDegreeConstraints.forEach((constraint) => solver.add(constraint));
 
-      // 全てのエッジを0に設定（すべての頂点の次数が0）
-      boardVar.horizontalEdges.flat().forEach((edge) => solver.add(edge.eq(0)));
-      boardVar.verticalEdges.flat().forEach((edge) => solver.add(edge.eq(0)));
+      // エッジの値を固定
+      edges.horizontal.forEach((row, i) => {
+        row.forEach((val, j) => {
+          solver.add(boardVar.horizontalEdges[i][j].eq(val));
+        });
+      });
+      edges.vertical.forEach((row, i) => {
+        row.forEach((val, j) => {
+          solver.add(boardVar.verticalEdges[i][j].eq(val));
+        });
+      });
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with invalid vertex degrees (1 or 3)", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      const boardVar = createBoardVariable(
-        {
-          size: 2,
-          cells: [
-            [0, 0],
-            [0, 0],
-          ],
-          horizontalEdges: [
-            [0, 0],
-            [0, 0],
-            [0, 0],
-          ],
-          verticalEdges: [
-            [0, 0, 0],
-            [0, 0, 0],
-          ],
-        },
-        ctx,
-      );
-
-      const vertexDegreeConstraints = VertexDegreeRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-
-      const solver = new ctx.Solver();
-      vertexDegreeConstraints.forEach((constraint) => solver.add(constraint));
-
-      // 頂点[0][0]の次数を1にする（無効）
-      solver.add(boardVar.horizontalEdges[0][0].eq(1));
-      solver.add(boardVar.verticalEdges[0][0].eq(0));
-
-      const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

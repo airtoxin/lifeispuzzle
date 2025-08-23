@@ -22,43 +22,92 @@ export const ColumnSortRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("ColumnSortRule", () => {
-    it("should be satisfied with sorted columns", async () => {
+    test.for<[string, "sat" | "unsat", BoardState]>([
+      [
+        "列が昇順でソートされている場合",
+        "sat",
+        {
+          size: 3,
+          cells: [
+            [1, 3, 5],
+            [2, 4, 6],
+            [3, 5, 7],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "列が降順でソートされている場合",
+        "sat",
+        {
+          size: 3,
+          cells: [
+            [3, 6, 9],
+            [2, 5, 8],
+            [1, 4, 7],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "列がソートされていない場合",
+        "unsat",
+        {
+          size: 3,
+          cells: [
+            [3, 0, 0],
+            [1, 0, 0],
+            [2, 0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+    ])("%s (%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
-      // ルールに違反しない初期盤面（列が昇順にソート済み）
-      const validBoardState: BoardState = {
-        size: 3,
-        cells: [
-          [1, 3, 5],
-          [2, 4, 6],
-          [3, 5, 7],
-        ],
-        horizontalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(validBoardState, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
       const columnSortConstraints = ColumnSortRule.getConstraints(
         boardVar,
         ctx,
       );
       const givenValueConstraints = createGivenValuesRule(
-        validBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
 
       const solver = new ctx.Solver();
@@ -67,52 +116,7 @@ if (import.meta.vitest) {
       );
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with unsorted columns", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // ルールに違反する初期盤面（列がソートされていない）
-      const invalidBoardState: BoardState = {
-        size: 3,
-        cells: [
-          [3, 0, 0],
-          [1, 0, 0],
-          [2, 0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(invalidBoardState, ctx);
-      const columnSortConstraints = ColumnSortRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const givenValueConstraints = createGivenValuesRule(
-        invalidBoardState,
-      ).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      [...columnSortConstraints, ...givenValueConstraints].forEach(
-        (constraint) => solver.add(constraint),
-      );
-
-      const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

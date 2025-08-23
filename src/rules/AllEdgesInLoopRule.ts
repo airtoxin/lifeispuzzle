@@ -31,16 +31,20 @@ export const AllEdgesInLoopRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("AllEdgesInLoopRule", () => {
-    it("should be satisfied with any valid configuration", async () => {
+    test.for<[string, "sat"]>([
+      ["空のエッジ設定での場合", "sat"],
+      ["任意のエッジ設定での場合", "sat"],
+    ])("%s (%s)", async ([description, expecting]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
       // AllEdgesInLoopRuleは空の制約を返すため、常にsatisfiable
+      const isEmptyCase = description.includes("空の");
       const boardVar = createBoardVariable(
         {
           size: 2,
@@ -48,15 +52,26 @@ if (import.meta.vitest) {
             [0, 0],
             [0, 0],
           ],
-          horizontalEdges: [
-            [0, 0],
-            [0, 0],
-            [0, 0],
-          ],
-          verticalEdges: [
-            [0, 0, 0],
-            [0, 0, 0],
-          ],
+          horizontalEdges: isEmptyCase
+            ? [
+                [0, 0],
+                [0, 0],
+                [0, 0],
+              ]
+            : [
+                [1, 1],
+                [1, 1],
+                [1, 1],
+              ],
+          verticalEdges: isEmptyCase
+            ? [
+                [0, 0, 0],
+                [0, 0, 0],
+              ]
+            : [
+                [1, 1, 1],
+                [1, 1, 1],
+              ],
         },
         ctx,
       );
@@ -70,64 +85,7 @@ if (import.meta.vitest) {
       allEdgesInLoopConstraints.forEach((constraint) => solver.add(constraint));
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be satisfied even with arbitrary edge configuration", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // AllEdgesInLoopRuleは空の制約なので、任意の設定でもsat
-      const boardVar = createBoardVariable(
-        {
-          size: 2,
-          cells: [
-            [0, 0],
-            [0, 0],
-          ],
-          horizontalEdges: [
-            [1, 1],
-            [1, 1],
-            [1, 1],
-          ],
-          verticalEdges: [
-            [1, 1, 1],
-            [1, 1, 1],
-          ],
-        },
-        ctx,
-      );
-
-      const allEdgesInLoopConstraints = AllEdgesInLoopRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const givenEdgeConstraints = createGivenEdgesRule({
-        size: 2,
-        cells: [
-          [0, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [1, 1],
-          [1, 1],
-          [1, 1],
-        ],
-        verticalEdges: [
-          [1, 1, 1],
-          [1, 1, 1],
-        ],
-      }).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      [...allEdgesInLoopConstraints, ...givenEdgeConstraints].forEach(
-        (constraint) => solver.add(constraint),
-      );
-
-      const result = await solver.check();
-      expect(result).toBe("sat");
+      expect(result).toBe(expecting);
     });
   });
 }
@@ -243,11 +201,11 @@ export function getNeighbors<T extends string>(
 }
 // ヘルパー関数のテスト
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("Helper Functions", () => {
     describe("isDegree2", () => {
-      it("should return true for vertex with exactly 2 adjacent edges", async () => {
+      test("隣接エッジがちょうど2個の頂点でtrueを返す", async () => {
         const z3 = await import("z3-solver");
         const { Context } = await z3.init();
         const ctx = Context("test");
@@ -302,7 +260,7 @@ if (import.meta.vitest) {
         expect(result).toBe("sat");
       });
 
-      it("should return false for vertex with degree 0", async () => {
+      test("次数0の頂点でfalseを返す", async () => {
         const z3 = await import("z3-solver");
         const { Context } = await z3.init();
         const ctx = Context("test");
@@ -352,7 +310,7 @@ if (import.meta.vitest) {
     });
 
     describe("hasEdgeBetween", () => {
-      it("should return true when horizontal edge exists", async () => {
+      test("水平エッジが存在する場合にtrueを返す", async () => {
         const z3 = await import("z3-solver");
         const { Context } = await z3.init();
         const ctx = Context("test");
@@ -389,7 +347,7 @@ if (import.meta.vitest) {
         expect(result).toBe("sat");
       });
 
-      it("should return true when vertical edge exists", async () => {
+      test("垂直エッジが存在する場合にtrueを返す", async () => {
         const z3 = await import("z3-solver");
         const { Context } = await z3.init();
         const ctx = Context("test");
@@ -426,7 +384,7 @@ if (import.meta.vitest) {
         expect(result).toBe("sat");
       });
 
-      it("should return false for non-adjacent vertices", async () => {
+      test("隣接していない頂点でfalseを返す", async () => {
         const z3 = await import("z3-solver");
         const { Context } = await z3.init();
         const ctx = Context("test");
@@ -459,7 +417,7 @@ if (import.meta.vitest) {
     });
 
     describe("getNeighbors", () => {
-      it("should return correct neighbors for corner vertex", () => {
+      test("角の頂点で正しい隣接頂点を返す", () => {
         // サイズ2のグリッドの模擬BoardVariable
         const mockBoardVar = { size: 2 } as BoardVariable<"test">;
 
@@ -472,7 +430,7 @@ if (import.meta.vitest) {
         ]);
       });
 
-      it("should return correct neighbors for center vertex", () => {
+      test("中央の頂点で正しい隣接頂点を返す", () => {
         // サイズ2のグリッドの模擬BoardVariable
         const mockBoardVar = { size: 2 } as BoardVariable<"test">;
 
@@ -487,7 +445,7 @@ if (import.meta.vitest) {
         ]);
       });
 
-      it("should return correct neighbors for edge vertex", () => {
+      test("エッジの頂点で正しい隣接頂点を返す", () => {
         // サイズ2のグリッドの模擬BoardVariable
         const mockBoardVar = { size: 2 } as BoardVariable<"test">;
 

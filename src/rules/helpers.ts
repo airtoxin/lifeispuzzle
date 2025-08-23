@@ -70,81 +70,73 @@ export function createGivenValuesRule(initialState: BoardState): Rule {
 }
 
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("createGivenValuesRule", () => {
-    it("should be satisfied when given values are consistent", async () => {
+    test.for<[string, "sat" | "unsat", BoardState, boolean]>([
+      [
+        "与えられた値が一貫している場合",
+        "sat",
+        {
+          size: 2,
+          cells: [
+            [1, 2],
+            [3, 4],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+        false,
+      ],
+      [
+        "矛盾する値が与えられた場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [1, 0],
+            [0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+        true,
+      ],
+    ])("%s (%s)", async ([, expecting, boardState, addConflict]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
-
-      const validBoardState: BoardState = {
-        size: 2,
-        cells: [
-          [1, 2],
-          [3, 4],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(validBoardState, ctx);
-      const rule = createGivenValuesRule(validBoardState);
-      const constraints = rule.getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      constraints.forEach((constraint) => solver.add(constraint));
-
-      const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated when conflicting values are given", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      const boardState: BoardState = {
-        size: 2,
-        cells: [
-          [1, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-      };
 
       const boardVar = createBoardVariable(boardState, ctx);
       const givenValueConstraints = createGivenValuesRule(
         boardState,
       ).getConstraints(boardVar, ctx);
 
-      // 矛盾した制約を追加（同じセルに異なる値を設定）
-      const conflictingConstraint = boardVar.cells[0][0].eq(5);
-
       const solver = new ctx.Solver();
-      [...givenValueConstraints, conflictingConstraint].forEach((constraint) =>
-        solver.add(constraint),
-      );
+      givenValueConstraints.forEach((constraint) => solver.add(constraint));
+
+      if (addConflict) {
+        const conflictingConstraint = boardVar.cells[0][0].eq(5);
+        solver.add(conflictingConstraint);
+      }
 
       const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

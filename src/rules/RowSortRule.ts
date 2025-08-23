@@ -20,40 +20,89 @@ export const RowSortRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("RowSortRule", () => {
-    it("should be satisfied with sorted rows", async () => {
+    test.for<[string, "sat" | "unsat", BoardState]>([
+      [
+        "行が昇順でソートされている場合",
+        "sat",
+        {
+          size: 3,
+          cells: [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "行が降順でソートされている場合",
+        "sat",
+        {
+          size: 3,
+          cells: [
+            [9, 8, 7],
+            [6, 5, 4],
+            [3, 2, 1],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "行がソートされていない場合",
+        "unsat",
+        {
+          size: 3,
+          cells: [
+            [3, 1, 2],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          horizontalEdges: [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          verticalEdges: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
+    ])("%s (%s)", async ([, expecting, boardState]) => {
       const z3 = await import("z3-solver");
       const { Context } = await z3.init();
       const ctx = Context("test");
       const { createBoardVariable } = await import("../states.js");
 
-      // ルールに違反しない初期盤面（行が昇順にソート済み）
-      const validBoardState: BoardState = {
-        size: 3,
-        cells: [
-          [1, 2, 3],
-          [4, 5, 6],
-          [7, 8, 9],
-        ],
-        horizontalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(validBoardState, ctx);
+      const boardVar = createBoardVariable(boardState, ctx);
       const rowSortConstraints = RowSortRule.getConstraints(boardVar, ctx);
       const givenValueConstraints = createGivenValuesRule(
-        validBoardState,
+        boardState,
       ).getConstraints(boardVar, ctx);
 
       const solver = new ctx.Solver();
@@ -62,49 +111,7 @@ if (import.meta.vitest) {
       );
 
       const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with unsorted rows", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      // ルールに違反する初期盤面（行がソートされていない）
-      const invalidBoardState: BoardState = {
-        size: 3,
-        cells: [
-          [3, 1, 2],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        horizontalEdges: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        verticalEdges: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-        ],
-      };
-
-      const boardVar = createBoardVariable(invalidBoardState, ctx);
-      const rowSortConstraints = RowSortRule.getConstraints(boardVar, ctx);
-      const givenValueConstraints = createGivenValuesRule(
-        invalidBoardState,
-      ).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
-      [...rowSortConstraints, ...givenValueConstraints].forEach((constraint) =>
-        solver.add(constraint),
-      );
-
-      const result = await solver.check();
-      expect(result).toBe("unsat");
+      expect(result).toBe(expecting);
     });
   });
 }

@@ -132,22 +132,25 @@ export const SingleLoopRule: Rule = {
   },
 };
 if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest;
+  const { test, expect, describe } = import.meta.vitest;
 
   describe("SingleLoopRule (Reachability-based)", () => {
-    it("should be satisfied with no edges", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      const boardVar = createBoardVariable(
+    test.for<
+      [
+        string,
+        "sat" | "unsat",
+        {
+          size: number;
+          horizontalEdges: number[][];
+          verticalEdges: number[][];
+        },
+      ]
+    >([
+      [
+        "エッジがない場合",
+        "sat",
         {
           size: 2,
-          cells: [
-            [0, 0],
-            [0, 0],
-          ],
           horizontalEdges: [
             [0, 0],
             [0, 0],
@@ -158,101 +161,28 @@ if (import.meta.vitest) {
             [0, 0, 0],
           ],
         },
-        ctx,
-      );
-
-      const singleLoopConstraints = SingleLoopRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-
-      const solver = new ctx.Solver();
-      singleLoopConstraints.forEach((constraint) => solver.add(constraint));
-
-      // 全エッジを0に固定（エッジなし）
-      boardVar.horizontalEdges.flat().forEach((edge) => solver.add(edge.eq(0)));
-      boardVar.verticalEdges.flat().forEach((edge) => solver.add(edge.eq(0)));
-
-      const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be satisfied with a valid single loop", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      const boardVar = createBoardVariable(
+      ],
+      [
+        "単一の有効なループの場合",
+        "sat",
         {
           size: 2,
-          cells: [
-            [0, 0],
-            [0, 0],
-          ],
           horizontalEdges: [
-            [1, 1], // 上の行
-            [0, 0], // 真ん中の行
-            [1, 1], // 下の行
+            [1, 1],
+            [0, 0],
+            [1, 1],
           ],
           verticalEdges: [
-            [1, 0, 1], // 左と右の境界
+            [1, 0, 1],
             [1, 0, 1],
           ],
         },
-        ctx,
-      );
-
-      const singleLoopConstraints = SingleLoopRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const vertexDegreeConstraints = VertexDegreeRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const givenEdgeConstraints = createGivenEdgesRule({
-        size: 2,
-        cells: [
-          [0, 0],
-          [0, 0],
-        ],
-        horizontalEdges: [
-          [1, 1],
-          [0, 0],
-          [1, 1],
-        ],
-        verticalEdges: [
-          [1, 0, 1],
-          [1, 0, 1],
-        ],
-      }).getConstraints(boardVar, ctx);
-
-      const solver = new ctx.Solver();
+      ],
       [
-        ...singleLoopConstraints,
-        ...vertexDegreeConstraints,
-        ...givenEdgeConstraints,
-      ].forEach((constraint) => solver.add(constraint));
-
-      const result = await solver.check();
-      expect(result).toBe("sat");
-    });
-
-    it("should be violated with multiple disconnected loops", async () => {
-      const z3 = await import("z3-solver");
-      const { Context } = await z3.init();
-      const ctx = Context("test");
-      const { createBoardVariable } = await import("../states.js");
-
-      const boardVar = createBoardVariable(
+        "複数の独立したループがある場合",
+        "unsat",
         {
           size: 3,
-          cells: [
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0],
-          ],
           horizontalEdges: [
             [1, 1, 0],
             [0, 0, 0],
@@ -265,48 +195,51 @@ if (import.meta.vitest) {
             [0, 0, 1, 1],
           ],
         },
-        ctx,
-      );
+      ],
+    ])(
+      "%s (%s)",
+      async ([, expecting, { size, horizontalEdges, verticalEdges }]) => {
+        const z3 = await import("z3-solver");
+        const { Context } = await z3.init();
+        const ctx = Context("test");
+        const { createBoardVariable } = await import("../states.js");
 
-      const singleLoopConstraints = SingleLoopRule.getConstraints(
-        boardVar,
-        ctx,
-      );
-      const vertexDegreeConstraints = VertexDegreeRule.getConstraints(
-        boardVar,
-        ctx,
-      );
+        const cells = Array.from({ length: size }, () => Array(size).fill(0));
+        const boardVar = createBoardVariable(
+          {
+            size,
+            cells,
+            horizontalEdges,
+            verticalEdges,
+          },
+          ctx,
+        );
 
-      // 2つの独立した小さなループを作る設定
-      const givenEdgeConstraints = createGivenEdgesRule({
-        size: 3,
-        cells: [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0],
-        ],
-        horizontalEdges: [
-          [1, 1, 0], // 左上のループ
-          [0, 0, 0],
-          [0, 0, 1], // 右下のループ
-          [0, 0, 1],
-        ],
-        verticalEdges: [
-          [1, 1, 0, 0],
-          [1, 1, 0, 0],
-          [0, 0, 1, 1],
-        ],
-      }).getConstraints(boardVar, ctx);
+        const singleLoopConstraints = SingleLoopRule.getConstraints(
+          boardVar,
+          ctx,
+        );
+        const vertexDegreeConstraints = VertexDegreeRule.getConstraints(
+          boardVar,
+          ctx,
+        );
+        const givenEdgeConstraints = createGivenEdgesRule({
+          size,
+          cells,
+          horizontalEdges,
+          verticalEdges,
+        }).getConstraints(boardVar, ctx);
 
-      const solver = new ctx.Solver();
-      [
-        ...singleLoopConstraints,
-        ...vertexDegreeConstraints,
-        ...givenEdgeConstraints,
-      ].forEach((constraint) => solver.add(constraint));
+        const solver = new ctx.Solver();
+        [
+          ...singleLoopConstraints,
+          ...vertexDegreeConstraints,
+          ...givenEdgeConstraints,
+        ].forEach((constraint) => solver.add(constraint));
 
-      const result = await solver.check();
-      expect(result).toBe("unsat");
-    });
+        const result = await solver.check();
+        expect(result).toBe(expecting);
+      },
+    );
   });
 }
