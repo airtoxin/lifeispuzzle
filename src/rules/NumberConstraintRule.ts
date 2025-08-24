@@ -1,4 +1,4 @@
-import { Context, Bool } from "z3-solver";
+import { Bool, Context } from "z3-solver";
 import { Rule } from "./types";
 import { BoardState, BoardVariable } from "../states";
 import { createGivenEdgesRule, createGivenValuesRule } from "./helpers";
@@ -65,6 +65,7 @@ export const NumberConstraintRule: Rule = {
     return constraints;
   },
 };
+
 if (import.meta.vitest) {
   const { test, expect, describe } = import.meta.vitest;
 
@@ -81,52 +82,72 @@ if (import.meta.vitest) {
           ],
           horizontalEdges: [
             [1, 0],
-            [1, 1],
+            [0, 1],
             [0, 0],
           ],
           verticalEdges: [
             [1, 0, 0],
-            [0, 1, 0],
-          ],
-        },
-      ],
-      [
-        "数字の周りのエッジ数が間違っている場合",
-        "unsat",
-        {
-          size: 2,
-          cells: [
-            [3, 0], // 3が指定されているが周りのエッジは2個のみ
-            [0, 0],
-          ],
-          horizontalEdges: [
-            [1, 0], // 上のエッジ
-            [1, 0], // 下のエッジ
-            [0, 0],
-          ],
-          verticalEdges: [
-            [0, 0, 0], // 左右のエッジは0
             [0, 0, 0],
           ],
         },
       ],
       [
-        "0の数字は制約の対象外の場合",
+        "複雑な盤面",
         "sat",
         {
           size: 2,
           cells: [
-            [0, 0], // 0なので制約なし
+            [3, 2],
+            [2, 3],
+          ],
+          horizontalEdges: [
+            [1, 1],
+            [1, 0],
+            [0, 1],
+          ],
+          verticalEdges: [
+            [1, 0, 1],
+            [0, 1, 1],
+          ],
+        },
+      ],
+      [
+        "0のみの盤面",
+        "sat",
+        {
+          size: 2,
+          cells: [
+            [0, 0],
             [0, 0],
           ],
           horizontalEdges: [
-            [1, 1], // エッジの値は任意
-            [1, 1],
-            [1, 1],
+            [0, 0],
+            [0, 0],
+            [0, 0],
           ],
           verticalEdges: [
-            [1, 1, 1],
-            [1, 1, 1],
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+      ],
+      [
+        "数字の周りのエッジ数が異なる場合",
+        "unsat",
+        {
+          size: 2,
+          cells: [
+            [3, 0],
+            [0, 3],
+          ],
+          horizontalEdges: [
+            [1, 0],
+            [1, 1],
+            [0, 1],
+          ],
+          verticalEdges: [
+            [1, 1, 0],
+            [0, 1, 1],
           ],
         },
       ],
