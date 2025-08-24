@@ -101,35 +101,35 @@ export function isDegree2<T extends string>(
   // 上のエッジ
   if (
     p > 0 &&
-    p - 1 < boardVar.horizontalEdges.length &&
-    q < boardVar.horizontalEdges[p - 1].length
+    p - 1 < boardVar.verticalEdges.length &&
+    q < boardVar.verticalEdges[p - 1].length
   ) {
-    adjacentEdges.push(boardVar.horizontalEdges[p - 1][q]);
+    adjacentEdges.push(boardVar.verticalEdges[p - 1][q]);
   }
 
   // 下のエッジ
-  if (
-    p < boardVar.horizontalEdges.length &&
-    q < boardVar.horizontalEdges[p].length
-  ) {
-    adjacentEdges.push(boardVar.horizontalEdges[p][q]);
-  }
-
-  // 左のエッジ
-  if (
-    p < boardVar.verticalEdges.length &&
-    q > 0 &&
-    q - 1 < boardVar.verticalEdges[p].length
-  ) {
-    adjacentEdges.push(boardVar.verticalEdges[p][q - 1]);
-  }
-
-  // 右のエッジ
   if (
     p < boardVar.verticalEdges.length &&
     q < boardVar.verticalEdges[p].length
   ) {
     adjacentEdges.push(boardVar.verticalEdges[p][q]);
+  }
+
+  // 左のエッジ
+  if (
+    p < boardVar.horizontalEdges.length &&
+    q > 0 &&
+    q - 1 < boardVar.horizontalEdges[p].length
+  ) {
+    adjacentEdges.push(boardVar.horizontalEdges[p][q - 1]);
+  }
+
+  // 右のエッジ
+  if (
+    p < boardVar.horizontalEdges.length &&
+    q < boardVar.horizontalEdges[p].length
+  ) {
+    adjacentEdges.push(boardVar.horizontalEdges[p][q]);
   }
 
   if (adjacentEdges.length === 0) {
@@ -158,10 +158,10 @@ export function hasEdgeBetween<T extends string>(
     const minQ = Math.min(q1, q2);
     const maxQ = Math.max(q1, q2);
     if (
-      p1 < boardVar.verticalEdges.length &&
-      maxQ < boardVar.verticalEdges[p1].length
+      p1 < boardVar.horizontalEdges.length &&
+      minQ < boardVar.horizontalEdges[p1].length
     ) {
-      return boardVar.verticalEdges[p1][maxQ].eq(1);
+      return boardVar.horizontalEdges[p1][minQ].eq(1);
     }
   }
 
@@ -170,10 +170,10 @@ export function hasEdgeBetween<T extends string>(
     const minP = Math.min(p1, p2);
     const maxP = Math.max(p1, p2);
     if (
-      maxP < boardVar.horizontalEdges.length &&
-      q1 < boardVar.horizontalEdges[maxP].length
+      minP < boardVar.verticalEdges.length &&
+      q1 < boardVar.verticalEdges[minP].length
     ) {
-      return boardVar.horizontalEdges[maxP][q1].eq(1);
+      return boardVar.verticalEdges[minP][q1].eq(1);
     }
   }
 
@@ -235,21 +235,21 @@ if (import.meta.vitest) {
         const solver = new ctx.Solver();
 
         // エッジ値を固定 - 頂点(1,1)に隣接するエッジを2つだけ1にする
-        solver.add(boardVar.horizontalEdges[0][1].eq(1)); // 上のエッジ
-        solver.add(boardVar.verticalEdges[1][0].eq(1)); // 左のエッジ
+        solver.add(boardVar.verticalEdges[0][1].eq(1)); // 上のエッジ
+        solver.add(boardVar.horizontalEdges[1][0].eq(1)); // 左のエッジ
 
         // 他のエッジは0に固定
         solver.add(boardVar.horizontalEdges[0][0].eq(0));
-        // horizontalEdges[0][1] は上で1に設定済み
-        solver.add(boardVar.horizontalEdges[1][0].eq(0));
-        solver.add(boardVar.horizontalEdges[1][1].eq(0)); // 下のエッジは0
+        solver.add(boardVar.horizontalEdges[0][1].eq(0));
+        // horizontalEdges[1][0] は上で1に設定済み
+        solver.add(boardVar.horizontalEdges[1][1].eq(0)); // 右のエッジは0
         solver.add(boardVar.horizontalEdges[2][0].eq(0));
         solver.add(boardVar.horizontalEdges[2][1].eq(0));
         solver.add(boardVar.verticalEdges[0][0].eq(0));
-        solver.add(boardVar.verticalEdges[0][1].eq(0));
+        // verticalEdges[0][1] は上で1に設定済み
         solver.add(boardVar.verticalEdges[0][2].eq(0));
-        // verticalEdges[1][0] は上で1に設定済み
-        solver.add(boardVar.verticalEdges[1][1].eq(0)); // 右のエッジは0
+        solver.add(boardVar.verticalEdges[1][0].eq(0)); // 下のエッジは0
+        solver.add(boardVar.verticalEdges[1][1].eq(0));
         solver.add(boardVar.verticalEdges[1][2].eq(0));
 
         // 頂点(1,1)が次数2かテスト

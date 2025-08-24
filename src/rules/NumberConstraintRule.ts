@@ -19,38 +19,38 @@ export const NumberConstraintRule: Rule = {
         const cellValue = boardVar.cells[row][col];
         const edges = [];
 
-        // 上のエッジ（水平エッジ[row][col]）
+        // 上のエッジ（垂直エッジ[row-1][col]）
         if (
-          row >= 0 &&
-          row < boardVar.horizontalEdges.length &&
-          col < boardVar.horizontalEdges[row].length
+          row > 0 &&
+          row - 1 < boardVar.verticalEdges.length &&
+          col < boardVar.verticalEdges[row - 1].length
         ) {
-          edges.push(boardVar.horizontalEdges[row][col]);
+          edges.push(boardVar.verticalEdges[row - 1][col]);
         }
 
-        // 下のエッジ（水平エッジ[row+1][col]）
-        if (
-          row + 1 < boardVar.horizontalEdges.length &&
-          col < boardVar.horizontalEdges[row + 1].length
-        ) {
-          edges.push(boardVar.horizontalEdges[row + 1][col]);
-        }
-
-        // 左のエッジ（垂直エッジ[row][col]）
+        // 下のエッジ（垂直エッジ[row][col]）
         if (
           row < boardVar.verticalEdges.length &&
-          col >= 0 &&
           col < boardVar.verticalEdges[row].length
         ) {
           edges.push(boardVar.verticalEdges[row][col]);
         }
 
-        // 右のエッジ（垂直エッジ[row][col+1]）
+        // 左のエッジ（水平エッジ[row][col-1]）
         if (
-          row < boardVar.verticalEdges.length &&
-          col + 1 < boardVar.verticalEdges[row].length
+          row < boardVar.horizontalEdges.length &&
+          col > 0 &&
+          col - 1 < boardVar.horizontalEdges[row].length
         ) {
-          edges.push(boardVar.verticalEdges[row][col + 1]);
+          edges.push(boardVar.horizontalEdges[row][col - 1]);
+        }
+
+        // 右のエッジ（水平エッジ[row][col]）
+        if (
+          row < boardVar.horizontalEdges.length &&
+          col < boardVar.horizontalEdges[row].length
+        ) {
+          edges.push(boardVar.horizontalEdges[row][col]);
         }
 
         // エッジの合計がセルの値と等しい制約を追加
@@ -92,22 +92,22 @@ if (import.meta.vitest) {
         },
       ],
       [
-        "複雑な盤面",
+        "別パターンの有効な盤面",
         "sat",
         {
           size: 2,
           cells: [
-            [3, 2],
-            [2, 3],
+            [1, 1],
+            [1, 1],
           ],
           horizontalEdges: [
-            [1, 1],
             [1, 0],
+            [0, 0],
             [0, 1],
           ],
           verticalEdges: [
-            [1, 0, 1],
-            [0, 1, 1],
+            [0, 1],
+            [1, 0],
           ],
         },
       ],
