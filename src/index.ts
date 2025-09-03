@@ -103,6 +103,6 @@ async function runSample() {
 }
 
 // サンプル実行（このファイルが直接実行された場合）
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   runSample().catch(console.error);
 }

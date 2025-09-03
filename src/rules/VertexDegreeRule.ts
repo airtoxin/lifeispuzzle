@@ -25,9 +25,11 @@ export const VertexDegreeRule: Rule = {
     boardVar.horizontalEdges.forEach((row, rowIndex) => {
       row.forEach((edge, colIndex) => {
         // この水平エッジは頂点(rowIndex, colIndex)と(rowIndex, colIndex+1)を接続
-        vertexDegrees[rowIndex][colIndex] = vertexDegrees[rowIndex][colIndex].add(edge);
+        vertexDegrees[rowIndex][colIndex] =
+          vertexDegrees[rowIndex][colIndex].add(edge);
         if (colIndex + 1 <= boardVar.size) {
-          vertexDegrees[rowIndex][colIndex + 1] = vertexDegrees[rowIndex][colIndex + 1].add(edge);
+          vertexDegrees[rowIndex][colIndex + 1] =
+            vertexDegrees[rowIndex][colIndex + 1].add(edge);
         }
       });
     });
@@ -36,9 +38,11 @@ export const VertexDegreeRule: Rule = {
     boardVar.verticalEdges.forEach((row, rowIndex) => {
       row.forEach((edge, colIndex) => {
         // この垂直エッジは頂点(rowIndex, colIndex)と(rowIndex+1, colIndex)を接続
-        vertexDegrees[rowIndex][colIndex] = vertexDegrees[rowIndex][colIndex].add(edge);
+        vertexDegrees[rowIndex][colIndex] =
+          vertexDegrees[rowIndex][colIndex].add(edge);
         if (rowIndex + 1 <= boardVar.size) {
-          vertexDegrees[rowIndex + 1][colIndex] = vertexDegrees[rowIndex + 1][colIndex].add(edge);
+          vertexDegrees[rowIndex + 1][colIndex] =
+            vertexDegrees[rowIndex + 1][colIndex].add(edge);
         }
       });
     });
@@ -209,32 +213,47 @@ if (import.meta.vitest) {
       const result = await solver.check();
       if (result !== expecting) {
         console.log(`Expected: ${expecting}, Got: ${result}`);
-        console.log('Board configuration:');
-        console.log('horizontalEdges:', JSON.stringify(boardState.horizontalEdges));
-        console.log('verticalEdges:', JSON.stringify(boardState.verticalEdges));
-        
+        console.log("Board configuration:");
+        console.log(
+          "horizontalEdges:",
+          JSON.stringify(boardState.horizontalEdges),
+        );
+        console.log("verticalEdges:", JSON.stringify(boardState.verticalEdges));
+
         // 各頂点の次数を手動計算して表示
-        console.log('\n頂点の次数:');
+        console.log("\n頂点の次数:");
         for (let p = 0; p <= boardVar.size; p++) {
           for (let q = 0; q <= boardVar.size; q++) {
             let degree = 0;
             // 上のエッジ (horizontalEdges[p-1][q])
-            if (p > 0 && q < boardState.horizontalEdges[p-1].length) {
-              degree += boardState.horizontalEdges[p-1][q];
+            if (p > 0 && q < boardState.horizontalEdges[p - 1].length) {
+              degree += boardState.horizontalEdges[p - 1][q];
             }
             // 下のエッジ (horizontalEdges[p][q])
-            if (p < boardState.horizontalEdges.length && q < boardState.horizontalEdges[p].length) {
+            if (
+              p < boardState.horizontalEdges.length &&
+              q < boardState.horizontalEdges[p].length
+            ) {
               degree += boardState.horizontalEdges[p][q];
             }
             // 左のエッジ (verticalEdges[p][q-1])
-            if (p < boardState.verticalEdges.length && q > 0 && q-1 < boardState.verticalEdges[p].length) {
-              degree += boardState.verticalEdges[p][q-1];
+            if (
+              p < boardState.verticalEdges.length &&
+              q > 0 &&
+              q - 1 < boardState.verticalEdges[p].length
+            ) {
+              degree += boardState.verticalEdges[p][q - 1];
             }
             // 右のエッジ (verticalEdges[p][q])
-            if (p < boardState.verticalEdges.length && q < boardState.verticalEdges[p].length) {
+            if (
+              p < boardState.verticalEdges.length &&
+              q < boardState.verticalEdges[p].length
+            ) {
               degree += boardState.verticalEdges[p][q];
             }
-            console.log(`Vertex (${p},${q}): degree=${degree} ${degree === 0 || degree === 2 ? '✓' : '❌'}`);
+            console.log(
+              `Vertex (${p},${q}): degree=${degree} ${degree === 0 || degree === 2 ? "✓" : "❌"}`,
+            );
           }
         }
       }
