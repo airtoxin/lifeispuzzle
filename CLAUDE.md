@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-Z3 SATソルバーを使用した数独ソルバーの実装プロジェクト。Node.jsで実装されている。
+Z3 SATソルバーを使用したパズルソルバー（Life is Puzzle）の実装プロジェクト。Node.jsで実装されている。
 
 ## 技術スタック
 

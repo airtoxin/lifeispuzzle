@@ -1,6 +1,6 @@
 # Name
 
-### sudokusolver
+### lifeispuzzle
 
 # Synopsis
 
@@ -10,7 +10,7 @@
 
 # Install:
 
-`npm install sudokusolver`
+`npm install lifeispuzzle`
 
 # Test:
 
