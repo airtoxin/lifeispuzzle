@@ -1,0 +1,7 @@
+# Workflow files should not be formatted to avoid permission issues
+.github/workflows/
+
+# Common ignore patterns
+dist/
+node_modules/
+*.log
