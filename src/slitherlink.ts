@@ -140,10 +140,8 @@ export function visualizeSlitherlinkSolution(solution: BoardState): string {
       line = "";
       for (let col = 0; col <= size; col++) {
         // 垂直エッジ
-        if (col <= size) {
-          const hasEdge = col < size + 1 ? solution.verticalEdges[row][col] === 1 : false;
-          line += hasEdge ? "|" : " ";
-        }
+        const hasEdge = solution.verticalEdges[row][col] === 1;
+        line += hasEdge ? "|" : " ";
         
         // セル（最後の列でない場合）
         if (col < size) {
@@ -204,7 +202,7 @@ if (import.meta.vitest) {
       const { Context } = await z3.init();
       const ctx = Context("test");
 
-      // 2x2の例：数字3があるが周りのエッジが2つしか1でない（矛盾）
+      // 2x2の例：数字3があるが、すべてのエッジを0に固定（矛盾）
       const boardState: BoardState = {
         size: 2,
         cells: [
@@ -212,12 +210,12 @@ if (import.meta.vitest) {
           [0, 0],
         ],
         horizontalEdges: [
-          [1, 0], // 上の行
-          [1, 0], // 真ん中の行  
+          [0, 0], // 上の行 - すべて0に固定
+          [0, 0], // 真ん中の行  
           [0, 0], // 下の行
         ],
         verticalEdges: [
-          [0, 0, 0], // 左の列、真ん中の列、右の列
+          [0, 0, 0], // 左の列、真ん中の列、右の列 - すべて0に固定
           [0, 0, 0],
         ],
       };

@@ -23,9 +23,7 @@ export function createGivenEdgesRule(initialState: BoardState): Rule {
           col++
         ) {
           const givenValue = initialState.horizontalEdges[row][col];
-          if (givenValue !== 0) {
-            constraints.push(boardVar.horizontalEdges[row][col].eq(givenValue));
-          }
+          constraints.push(boardVar.horizontalEdges[row][col].eq(givenValue));
         }
       }
 
@@ -33,9 +31,7 @@ export function createGivenEdgesRule(initialState: BoardState): Rule {
       for (let row = 0; row < initialState.verticalEdges.length; row++) {
         for (let col = 0; col < initialState.verticalEdges[row].length; col++) {
           const givenValue = initialState.verticalEdges[row][col];
-          if (givenValue !== 0) {
-            constraints.push(boardVar.verticalEdges[row][col].eq(givenValue));
-          }
+          constraints.push(boardVar.verticalEdges[row][col].eq(givenValue));
         }
       }
 
