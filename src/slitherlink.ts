@@ -284,10 +284,7 @@ if (import.meta.vitest) {
       };
 
       const visualization = visualizeSlitherlinkSolution(solution);
-      expect(visualization).toContain("+---+---+");
-      expect(visualization).toContain("| 2 | 2 |");
-      expect(visualization).toContain("+   +   +");
-      expect(visualization).toContain("+---+---+");
+      expect(visualization).toMatchSnapshot();
     });
   });
 }
